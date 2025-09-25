@@ -1,2 +1,27 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+    import { Map } from '@components';
+    import { loadData } from '$lib/assets/loadData'
+    import { onMount } from 'svelte';
+    import type { Order } from '@types';
+
+    let data = $state<Order[]|null>(null);
+    let error = $state<Error|null>(null);
+    let loading = $state(true);
+
+    onMount(async () => {
+        try {
+            data = await loadData();
+        }
+        catch (e: unknown) {
+            error = e instanceof Error ? e : null;
+        }
+        finally {
+            loading = false;
+        }
+    });
+</script>
+
+<main>
+    Hello??
+    <Map loading={loading} data={data} error={error}/>
+</main>
