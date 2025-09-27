@@ -10,12 +10,5 @@
 </script>
 
 <main>
-    This is the map.
-    <br>
-    {#if loading }
-        the map is loading...
-    {/if}
-    {#if data }
-        The data is {data.length} entries long
-    {/if}
+    This is the map component
 </main>
