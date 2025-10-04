@@ -22,6 +22,14 @@
 </script>
 
 <main>
-    Hello??
     <Map loading={loading} data={data} error={error}/>
 </main>
+
+<style>
+    main {
+        width: 100vw;
+        height: 100vh;
+        display: grid;
+        place-items: center;
+    }
+</style>
