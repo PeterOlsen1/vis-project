@@ -1,4 +1,4 @@
-import type { Order } from "@types";
+import type { Order } from "@data-types/order";
 import Papa from "papaparse";
 
 function orderFromCSV(csv: any): Order {

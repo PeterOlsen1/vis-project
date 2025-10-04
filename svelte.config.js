@@ -13,7 +13,8 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
 		alias: {
-			"@types": "src/lib/types",
+			"@data-types": "src/lib/types",
+			"@utils": "src/lib/utils",
 			"@components": "src/lib/components",
 		}
 	}

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Order } from "@types";
+    import type { Order } from "@data-types/order";
 
     type Props = {
         loading: boolean,

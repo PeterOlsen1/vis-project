@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { Map } from '@components';
-    import { loadData } from '$lib/assets/loadData'
+    import { Map } from '@components/map';
+    import { loadData } from '@utils/loadData'
     import { onMount } from 'svelte';
-    import type { Order } from '@types';
+    import type { Order } from '@data-types/order';
 
     let data = $state<Order[]|null>(null);
     let error = $state<Error|null>(null);
