@@ -2,6 +2,7 @@
     import type { Order } from "@data-types/order";
     import * as d3 from "d3";
     import { onMount } from "svelte";
+    import { ssrExportAllKey } from "vite/module-runner";
 
     type Props = {
         loading: boolean,
@@ -31,12 +32,23 @@
         }
 
         if (g) {
-            d3.select(g).selectAll('path')
+            const selection = d3.select(g).selectAll('path')
                 .data(world.features)
                 .enter().append("path")
                 .attr("d", (d: any) => path(d))
                 .attr("fill", "#ccc")
                 .attr("stroke", "#333");
+
+            selection.each((d: any, i, nodes) => {
+                const ele = nodes[i];
+                d3.select(ele)
+                    .on('mouseover', function() {
+                        ele.setAttribute('fill', 'orange')
+                    })
+                    .on('mouseout', function() {
+                        ele.setAttribute('fill', '#ccc');
+                    });
+            });
         }
     });
 
@@ -48,3 +60,10 @@
         <g bind:this={g}></g>
     </svg>
 </main>
+
+<style>
+    * {
+        transition:
+            all 0.3s ease;
+    }
+</style>
