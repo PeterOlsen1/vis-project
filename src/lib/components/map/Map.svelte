@@ -2,7 +2,6 @@
     import type { Order } from "@data-types/order";
     import * as d3 from "d3";
     import { onMount } from "svelte";
-    import { ssrExportAllKey } from "vite/module-runner";
 
     type Props = {
         loading: boolean,
