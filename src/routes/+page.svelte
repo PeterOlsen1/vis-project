@@ -7,6 +7,7 @@
     let data = $state<Order[] | null>(null);
     let error = $state<Error | null>(null);
     let loading = $state(true);
+    let selectedCountry = $state('');
 
     onMount(async () => {
         try {
@@ -20,7 +21,8 @@
 </script>
 
 <main>
-    <Map {loading} {data} {error} />
+    Yous selected: {selectedCountry}
+    <Map {loading} {data} {error} bind:selectedCountry={selectedCountry}/>
 </main>
 
 <style>

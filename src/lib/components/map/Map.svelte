@@ -7,10 +7,11 @@
         loading: boolean;
         error: Error | null;
         data: Order[] | null;
+        selectedCountry: string;
         width?: number;
         height?: number;
     };
-    const { loading, error, data, width = 960, height = 650 }: Props = $props();
+    let { loading, error, data, selectedCountry = $bindable(''), width = 960, height = 650 }: Props = $props();
 
     let svg = $state<SVGSVGElement | null>(null);
     let g = $state<SVGGElement | null>(null);
@@ -52,6 +53,9 @@
                     })
                     .on("mouseout", function () {
                         ele.setAttribute("fill", "#ccc");
+                    })
+                    .on("click", () => {                        
+                        selectedCountry = world.features[i].properties.name;
                     });
             });
         }
@@ -59,7 +63,6 @@
 </script>
 
 <main>
-    This is the map component
     <svg {width} {height} bind:this={svg}>
         <g bind:this={g}></g>
     </svg>
