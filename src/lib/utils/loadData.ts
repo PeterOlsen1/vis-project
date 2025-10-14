@@ -1,4 +1,6 @@
+import { asset } from "$app/paths";
 import type { Order } from "@data-types/order";
+import * as d3 from "d3";
 import Papa from "papaparse";
 
 function orderFromCSV(csv: any): Order {
@@ -33,8 +35,14 @@ function orderFromCSV(csv: any): Order {
     };
 }
 
+// cache data in localStorage
 export async function loadData(): Promise<Order[]> {
-    const resp = await fetch("/data/orders.csv");
+    // if (localStorage.getItem("orders")) {
+    //     const orders = JSON.parse(localStorage.getItem("orders") ?? "[]") as Order[];
+    //     return orders;
+    // }
+
+    const resp = await fetch(asset("/data/orders.csv"));
     const text = await resp.text();
     const csv =
         Papa.parse<Record<string, any>>(text, {
@@ -42,5 +50,22 @@ export async function loadData(): Promise<Order[]> {
             skipEmptyLines: true,
             dynamicTyping: true,
         }).data ?? [];
-    return csv.map(orderFromCSV);
+    
+    const ret = csv.map(orderFromCSV);
+    // localStorage.setItem("orders", JSON.stringify(ret));
+    // return ret.slice(0, 1000);
+    return ret;
+}
+
+export async function loadGeographyData(): Promise<any> {
+    // if (localStorage.getItem("world")) {
+    //     const world = JSON.parse(localStorage.getItem("world") ?? "{}");
+    //     return world;
+    // }
+
+    const world: any = await d3.json(
+        "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson",
+    );
+    // localStorage.setItem("world", JSON.stringify(world));
+    return world;
 }
