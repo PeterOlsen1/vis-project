@@ -22,7 +22,6 @@
     let showCircles = $state<boolean>(true);
     let effectRunning = $state<boolean>(true);
 
-
     let startDateRaw = $state<string>('');
     let endDateRaw = $state<string>('');
     let startDate = $derived<Date>(new Date(startDateRaw));
@@ -44,6 +43,14 @@
         return countryMap[name] || name;
     };
 
+    const getCircleSize = (v: number): number => {
+        return Math.sqrt(v) * 1.5;
+    }
+
+    const getHoveredCircleSize = (v: number): number => {
+        return Math.sqrt(v) * 1.5;
+    }
+
     // country : frequency buckets
     let dataBuckets = $derived.by(() => {
         const buckets = bucketByFrequency(data || []);
@@ -63,6 +70,14 @@
         const out: Record<string, City> = {};
 
         data.forEach(order => {
+            // date check
+            const orderDate = new Date(order.orderDate);
+            if (startDate || endDate) {
+                if (orderDate < startDate || orderDate > endDate) {
+                    return;
+                }
+            }
+
             const key = `${order.city}, ${order.country}`;
             const existing = out[key];
             if (existing) {
@@ -184,9 +199,10 @@
             .selectAll("circle")
             .data(cityData)
             .join("circle")
+            .attr('id', d => `${d.city}-${d.country}`)
             .attr("cx", d => d.x)
             .attr("cy", d => d.y)
-            .attr("r", d => Math.sqrt(d.count))
+            .attr("r", d => getCircleSize(d.count))
             .attr("fill", "rgba(255, 100, 0, 0.6)")
             .attr("stroke", "#fff")
             .attr("stroke-width", 0.8)
@@ -194,7 +210,7 @@
             .on("mouseover", function (event, d) {
                 d3.select(this)
                     .attr("fill", "rgba(255, 150, 0, 0.9)")
-                    .attr("r", Math.sqrt(d.count) * 2);
+                    .attr("r", getHoveredCircleSize(d.count));
                 
                 if (tooltip) {
                     tooltip.style.display = "block";
@@ -210,24 +226,41 @@
             .on("mouseout", function (event, d) {
                 d3.select(this)
                     .attr("fill", "rgba(255, 100, 0, 0.6)")
-                    .attr("r", Math.sqrt(d.count) * 1.5);
+                    .attr("r", getCircleSize(d.count));
                 
                 if (tooltip) {
                     tooltip.style.display = "none";
                 }
             })
             .on("click", (event, d) => {
+                // clicking on two dots in the same coutnry de-selects the country
                 selectedCountry = selectedCountry === d.normalizedCountry ? '' : d.normalizedCountry;
             });
-    })
+    });
 
+    $effect(() => {
+        Object.values(cityBuckets).forEach(c => {
+            try {
+                const q = `#${c.city}-${c.country}`
+                const circle = svg?.querySelector<SVGCircleElement>(q);
+                if (circle) {
+                    console.log(circle);
+                    circle.setAttribute('r', String(getCircleSize(c.count)));
+                }
+            } catch {
+                return;
+            }
+        })
+    });
+
+    // toggle circle display
     $effect(() => {
         if (showCircles) {
             d3.selectAll('circle').style('display', 'block')
         } else {
             d3.selectAll('circle').style('display', 'none')
         }
-    })
+    });
 </script>
 
 <main>
@@ -247,11 +280,11 @@
         </label>
     </div>
     <div>
-        date 1
+        start date
         <input type="date" bind:value={startDateRaw}>
     </div>
     <div>
-        date 2
+        end date
         <input type="date" bind:value={endDateRaw}>
     </div>
 </main>
