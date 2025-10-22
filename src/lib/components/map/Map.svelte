@@ -17,17 +17,18 @@
 
     let geography = $state<any>(null);
         const normalizeCountryName = (name: string): string => {
+        // dataset country name : geography country name
         const countryMap: Record<string, string> = {
-            'United States': 'USA',
-            'England': 'United Kingdom',
-            'Russia': 'Russia',
-            'Tanzania': 'United Republic of Tanzania',
-            'Vietnam': 'Vietnam',
-            'South Korea': 'South Korea',
-            'Czech Republic': 'Czech Republic',
-            'Congo': 'Republic of the Congo',
+            "Côte-d’Ivoire": "Ivory Coast",
+            "Guinea-Bissau": "Guinea Bissau",
+            "The Gambia": "Gambia",
+            "Serbia": "Republic of Serbia",
+            "Tanzania": "United Republic of Tanzania",
+            "United States": "USA",
+            "United Kingdom": "England",
+            "Myanmar (Burma)": "Myanmar",
+            "Democratic Republic of the Congo": "Republic of the Congo"
         };
-        
         return countryMap[name] || name;
     };
 
