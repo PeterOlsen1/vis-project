@@ -65,12 +65,6 @@
 
     onMount(async () => {
         geography = await loadGeographyData();
-
-        if (geography) {
-            console.log("Geography country names:", 
-                geography.features.map((f: any) => f.properties.name).sort()
-            );
-        }
     });
 
     $effect(() => {
@@ -82,10 +76,6 @@
             console.error("g is not defined");
             return;
         }
-        const uniqueCountries = Array.from(
-                new Set(data.map(d => d.country).filter(Boolean))
-            );
-        console.log("Countries in dataset:", uniqueCountries.sort());
 
         const selection = d3
             .select(g)
