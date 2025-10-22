@@ -16,10 +16,12 @@
     let { loading, error, data, selectedCountry = $bindable(''), width = 960, height = 650 }: Props = $props();
 
     let geography = $state<any>(null);
-        const normalizeCountryName = (name: string): string => {
+    let tooltip = $state<HTMLDivElement | null>(null);
+    
+    const normalizeCountryName = (name: string): string => {
         // dataset country name : geography country name
         const countryMap: Record<string, string> = {
-            "Côte-d’Ivoire": "Ivory Coast",
+            "Côte-d'Ivoire": "Ivory Coast",
             "Guinea-Bissau": "Guinea Bissau",
             "The Gambia": "Gambia",
             "Serbia": "Republic of Serbia",
@@ -176,11 +178,26 @@
                 d3.select(this)
                     .attr("fill", "rgba(255, 150, 0, 0.9)")
                     .attr("r", Math.sqrt(d.count) * 2);
+                
+                if (tooltip) {
+                    tooltip.style.display = "block";
+                    tooltip.style.left = `${event.pageX + 10}px`;
+                    tooltip.style.top = `${event.pageY + 10}px`;
+                    tooltip.innerHTML = `
+                        <strong>${d.city}</strong><br/>
+                        Country: ${d.country}<br/>
+                        Orders: ${d.count}
+                    `;
+                }
             })
             .on("mouseout", function (event, d) {
                 d3.select(this)
                     .attr("fill", "rgba(255, 100, 0, 0.6)")
                     .attr("r", Math.sqrt(d.count) * 1.5);
+                
+                if (tooltip) {
+                    tooltip.style.display = "none";
+                }
             })
             .on("click", (event, d) => {
                 selectedCountry = selectedCountry === d.normalizedCountry ? '' : d.normalizedCountry;
@@ -189,6 +206,7 @@
 </script>
 
 <main>
+    <div class="tooltip" bind:this={tooltip}></div>
     <svg {width} {height} bind:this={svg}>
         <g bind:this={g}></g>
     </svg>
@@ -197,5 +215,19 @@
 <style>
     * {
         transition: all 0.3s ease;
+    }
+    
+    .tooltip {
+        display: none;
+        position: fixed;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 10px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        pointer-events: none;
+        z-index: 1000;
+        line-height: 1.5;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 </style>
