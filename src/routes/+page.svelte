@@ -29,7 +29,9 @@
     main {
         width: 100vw;
         height: 100vh;
-        display: grid;
-        place-items: center;
+        display: flex;
+        padding-top: 2em;
+        align-items: center;
+        flex-direction: column;
     }
 </style>

@@ -4,6 +4,8 @@
     import { onMount } from "svelte";
     import { bucketByFrequency } from "@utils/bucketData";
     import { loadGeographyData } from "@utils/loadData";
+    import { Loader } from '@components/loader';
+    import type { City } from "@data-types/cityData";
 
     type Props = {
         loading: boolean;
@@ -18,6 +20,13 @@
     let geography = $state<any>(null);
     let tooltip = $state<HTMLDivElement | null>(null);
     let showCircles = $state<boolean>(true);
+    let effectRunning = $state<boolean>(true);
+
+
+    let startDateRaw = $state<string>('');
+    let endDateRaw = $state<string>('');
+    let startDate = $derived<Date>(new Date(startDateRaw));
+    let endDate = $derived<Date>(new Date(endDateRaw));
     
     const normalizeCountryName = (name: string): string => {
         // dataset country name : geography country name
@@ -35,7 +44,7 @@
         return countryMap[name] || name;
     };
 
-    
+    // country : frequency buckets
     let dataBuckets = $derived.by(() => {
         const buckets = bucketByFrequency(data || []);
         const remappedBuckets: Record<string, number> = {};
@@ -45,9 +54,32 @@
         }
         return remappedBuckets;
     });
+
+    // city : frequency buckets
+    let cityBuckets = $derived.by(() => {
+        if (!data) {
+            return {};
+        }
+        const out: Record<string, City> = {};
+
+        data.forEach(order => {
+            const key = `${order.city}, ${order.country}`;
+            const existing = out[key];
+            if (existing) {
+                existing.count++;
+            } else {
+                out[key] =  {
+                    city: order.city,
+                    country: order.country,
+                    count: 1
+                };
+            }
+        });
+
+        return out;
+    })
    
 
-    $inspect(dataBuckets);
     let svg = $state<SVGSVGElement | null>(null);
     let g = $state<SVGGElement | null>(null);
 
@@ -61,12 +93,13 @@
     const colorScale = $derived.by(() => d3.scaleLog<string>()
         .domain([1, d3.max(Object.values(dataBuckets)) || 1])
         .range(["#f0f9e8", "#0868ac"]));
-    $inspect(colorScale);
 
+    // load geography data only once on component mount
     onMount(async () => {
         geography = await loadGeographyData();
     });
 
+    // initial loading of the countries
     $effect(() => {
         if (loading || error || !data || !geography) {
             return;
@@ -76,6 +109,8 @@
             console.error("g is not defined");
             return;
         }
+
+        effectRunning = true;
 
         const selection = d3
             .select(g)
@@ -105,30 +140,22 @@
                     selectedCountry = selectedCountry == country ? '' : country;
                 });
         });
+
+        effectRunning = false;
+    })
+
+    // load circles
+    $effect(() => {
+        if (loading || error || !data || !geography || !g) {
+            return;
+        }
+
         const cityGroup = d3.select(g).append("g").attr("class", "cities");
-
-        const cityAggregation = new Map<string, { city: string; country: string; count: number; }>();
-
-        data.forEach(order => {
-            const key = `${order.city}, ${order.country}`;
-            const existing = cityAggregation.get(key);
-            if (existing) {
-                existing.count++;
-            } else {
-                cityAggregation.set(key, {
-                    city: order.city,
-                    country: order.country,
-                    count: 1
-                });
-            }
-        });
-
         
-        const cityData = Array.from(cityAggregation.values()).map(cityInfo => {
-            
+        const cityData = Object.values(cityBuckets).map(cityInfo => {
             const normalizedCountry = normalizeCountryName(cityInfo.country);
             
-            
+            // this is slow operation O(n). use hashmap that points to indicies instead?
             const countryFeature = geography.features.find(
                 (f: any) => f.properties.name === normalizedCountry
             );
@@ -140,7 +167,6 @@
             
             const centroid = path.centroid(countryFeature);
             const bounds = path.bounds(countryFeature);
-            
             
             const hash = cityInfo.city.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const offsetX = ((hash % 100) - 50) / 100 * (bounds[1][0] - bounds[0][0]) * 0.3;
@@ -160,7 +186,7 @@
             .join("circle")
             .attr("cx", d => d.x)
             .attr("cy", d => d.y)
-            .attr("r", d => Math.sqrt(d.count) * 1.5)
+            .attr("r", d => Math.sqrt(d.count))
             .attr("fill", "rgba(255, 100, 0, 0.6)")
             .attr("stroke", "#fff")
             .attr("stroke-width", 0.8)
@@ -206,20 +232,40 @@
 
 <main>
     <div class="tooltip" bind:this={tooltip}></div>
-    <svg {width} {height} bind:this={svg}>
-        <g bind:this={g}></g>
-    </svg>
+    <div class="map-container">
+        {#if effectRunning}
+            <Loader />
+        {/if}
+        <svg {width} {height} bind:this={svg} style="display: {effectRunning ? 'none' : 'block'}">
+            <g bind:this={g}></g>
+        </svg>
+    </div>
     <div>
         <input type="checkbox" id="map-show-circles" bind:checked={showCircles}>
         <label for="map-show-circles">
             Show circles?
         </label>
     </div>
+    <div>
+        date 1
+        <input type="date" bind:value={startDateRaw}>
+    </div>
+    <div>
+        date 2
+        <input type="date" bind:value={endDateRaw}>
+    </div>
 </main>
 
 <style>
     * {
         transition: all 0.3s ease;
+    }
+
+    .map-container {
+        width: 100%;
+        min-height: 50vh;
+        display: grid;
+        place-items: center;
     }
     
     .tooltip {
