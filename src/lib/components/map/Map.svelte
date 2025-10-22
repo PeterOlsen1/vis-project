@@ -17,6 +17,7 @@
 
     let geography = $state<any>(null);
     let tooltip = $state<HTMLDivElement | null>(null);
+    let showCircles = $state<boolean>(true);
     
     const normalizeCountryName = (name: string): string => {
         // dataset country name : geography country name
@@ -203,6 +204,14 @@
                 selectedCountry = selectedCountry === d.normalizedCountry ? '' : d.normalizedCountry;
             });
     })
+
+    $effect(() => {
+        if (showCircles) {
+            d3.selectAll('circle').style('display', 'block')
+        } else {
+            d3.selectAll('circle').style('display', 'none')
+        }
+    })
 </script>
 
 <main>
@@ -210,6 +219,12 @@
     <svg {width} {height} bind:this={svg}>
         <g bind:this={g}></g>
     </svg>
+    <div>
+        <input type="checkbox" id="map-show-circles" bind:checked={showCircles}>
+        <label for="map-show-circles">
+            Show circles?
+        </label>
+    </div>
 </main>
 
 <style>
