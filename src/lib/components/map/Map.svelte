@@ -5,7 +5,8 @@
     import { bucketByFrequency } from "@utils/bucketData";
     import { loadGeographyData } from "@utils/loadData";
     import { Loader } from '@components/loader';
-    import type { City } from "@data-types/cityData";
+    import type { City, CityData } from "@data-types/cityData";
+    import Page from "../../../routes/+page.svelte";
 
     type Props = {
         loading: boolean;
@@ -21,6 +22,7 @@
     let tooltip = $state<HTMLDivElement | null>(null);
     let showCircles = $state<boolean>(true);
     let effectRunning = $state<boolean>(true);
+    let circlesCreated = $state<boolean>(false);
 
     let startDateRaw = $state<string>('');
     let endDateRaw = $state<string>('');
@@ -51,23 +53,26 @@
         return Math.sqrt(v) * 1.5;
     }
 
-    // country : frequency buckets
-    let dataBuckets = $derived.by(() => {
-        const buckets = bucketByFrequency(data || []);
-        const remappedBuckets: Record<string, number> = {};
-        for (const [country, count] of Object.entries(buckets)) {
-            const normalizedName = normalizeCountryName(country);
-            remappedBuckets[normalizedName] = (remappedBuckets[normalizedName] || 0) + count;
-        }
-        return remappedBuckets;
-    });
+    // powers the circles
+    let cityFreqs = $state<Record<string, Record<string, number>>>({});
 
-    // city : frequency buckets
-    let cityBuckets = $derived.by(() => {
+    // loops over city buckets and applies callback function with city and country
+    let loopOverCityFreqs = (fn: (country: string, city: string) => void): void => {
+        Object.entries(cityFreqs).forEach(([country, cities]) => {
+            Object.keys(cities || {}).forEach((city) => fn(country, city));
+        });
+    };
+
+    // batch updates city buckets variable
+    const updateCityFreqs = () => {
         if (!data) {
             return {};
         }
-        const out: Record<string, City> = {};
+        const out = {...cityFreqs};
+
+        loopOverCityFreqs((country, city) => {
+            cityFreqs[country][city] = 0;
+        });
 
         data.forEach(order => {
             // date check
@@ -78,22 +83,29 @@
                 }
             }
 
-            const key = `${order.city}, ${order.country}`;
-            const existing = out[key];
-            if (existing) {
-                existing.count++;
-            } else {
-                out[key] =  {
-                    city: order.city,
-                    country: order.country,
-                    count: 1
-                };
+            let country = out[order.country];
+            if (!country) {
+                out[order.country] = {};
+                country = out[order.country];
             }
+
+            out[order.country][order.city] = (out[order.country][order.city] || 0) + 1;
         });
 
-        return out;
-    })
-   
+        //reassign in batch to avoid too many updates
+        cityFreqs = {...out}
+    }
+
+    // country : frequency buckets
+    let dataBuckets = $derived.by(() => {
+        const buckets = bucketByFrequency(data || []);
+        const remappedBuckets: Record<string, number> = {};
+        for (const [country, count] of Object.entries(buckets)) {
+            const normalizedName = normalizeCountryName(country);
+            remappedBuckets[normalizedName] = (remappedBuckets[normalizedName] || 0) + count;
+        }
+        return remappedBuckets;
+    });
 
     let svg = $state<SVGSVGElement | null>(null);
     let g = $state<SVGGElement | null>(null);
@@ -112,6 +124,7 @@
     // load geography data only once on component mount
     onMount(async () => {
         geography = await loadGeographyData();
+        updateCityFreqs();
     });
 
     // initial loading of the countries
@@ -161,14 +174,15 @@
 
     // load circles
     $effect(() => {
-        if (loading || error || !data || !geography || !g) {
+        if (loading || error || !data || !geography || !g || circlesCreated) {
             return;
         }
 
         const cityGroup = d3.select(g).append("g").attr("class", "cities");
         
-        const cityData = Object.values(cityBuckets).map(cityInfo => {
-            const normalizedCountry = normalizeCountryName(cityInfo.country);
+        let cityData: CityData[] = [];
+        loopOverCityFreqs((country, city) => {
+            const normalizedCountry = normalizeCountryName(country);
             
             // this is slow operation O(n). use hashmap that points to indicies instead?
             const countryFeature = geography.features.find(
@@ -176,24 +190,27 @@
             );
             
             if (!countryFeature) {
-                console.warn(`Country not found: ${cityInfo.country} (normalized: ${normalizedCountry})`);
+                console.warn(`Country not found: ${country} (normalized: ${normalizedCountry})`);
                 return null;
             }
             
             const centroid = path.centroid(countryFeature);
             const bounds = path.bounds(countryFeature);
             
-            const hash = cityInfo.city.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const hash = city.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const offsetX = ((hash % 100) - 50) / 100 * (bounds[1][0] - bounds[0][0]) * 0.3;
             const offsetY = ((hash % 73) - 36) / 100 * (bounds[1][1] - bounds[0][1]) * 0.3;
             
-            return {
-                ...cityInfo,
+            cityData.push({
+                city,
+                country,
+                count: cityFreqs[country][city] || 1,
                 normalizedCountry,
                 x: centroid[0] + offsetX,
                 y: centroid[1] + offsetY,
-            };
-        }).filter(d => d !== null);
+            });
+        });
+        cityData = cityData.filter(d => d !== null);
 
         cityGroup
             .selectAll("circle")
@@ -236,21 +253,18 @@
                 // clicking on two dots in the same coutnry de-selects the country
                 selectedCountry = selectedCountry === d.normalizedCountry ? '' : d.normalizedCountry;
             });
+
+        circlesCreated = true;
     });
 
     $effect(() => {
-        Object.values(cityBuckets).forEach(c => {
-            try {
-                const q = `#${c.city}-${c.country}`
-                const circle = svg?.querySelector<SVGCircleElement>(q);
-                if (circle) {
-                    console.log(circle);
-                    circle.setAttribute('r', String(getCircleSize(c.count)));
-                }
-            } catch {
-                return;
+        loopOverCityFreqs((country, city) => {
+            const q = `${city}-${country}`
+            const circle = svg?.getElementById(q);
+            if (circle) {
+                circle.setAttribute('r', String(getCircleSize(cityFreqs[country][city] || 0)));
             }
-        })
+        });
     });
 
     // toggle circle display
@@ -281,17 +295,23 @@
     </div>
     <div>
         start date
-        <input type="date" bind:value={startDateRaw}>
+        <input type="date" bind:value={startDateRaw} oninput={updateCityFreqs}>
     </div>
     <div>
         end date
-        <input type="date" bind:value={endDateRaw}>
+        <input type="date" bind:value={endDateRaw} oninput={updateCityFreqs}>
     </div>
 </main>
 
 <style>
     * {
         transition: all 0.3s ease;
+    }
+
+    circle {
+        transform-box: fill-box;
+        transform-origin: center;
+        transition: transform 240ms ease;
     }
 
     .map-container {
