@@ -18,7 +18,7 @@
         countriesLoading,
         countryFreqs,
         cityFreqs,
-    } from "./useMapStates.svelte";
+    } from "./mapStates.svelte";
     import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
     import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
 

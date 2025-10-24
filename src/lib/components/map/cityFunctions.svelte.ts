@@ -11,7 +11,7 @@ import {
     orderData,
     selectedCountry,
     cityFreqs,
-} from "./useMapStates.svelte";
+} from "./mapStates.svelte";
 import { normalizeCountryName, getCircleSize, getHoveredCircleSize } from "./utils";
 
 let startDate = $derived<Date>(new Date(startDateRaw.state));

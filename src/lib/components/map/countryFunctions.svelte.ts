@@ -7,7 +7,7 @@ import {
     g,
     selectedCountry, 
     countryFreqs,
-} from "./useMapStates.svelte";
+} from "./mapStates.svelte";
 import { normalizeCountryName } from "./utils";
 
 export function getCountryFreqs(orders: Order[]): Record<string, number> {
