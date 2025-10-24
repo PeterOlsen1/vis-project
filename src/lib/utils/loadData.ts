@@ -1,4 +1,5 @@
 import { asset } from "$app/paths";
+import type { CityGeoData } from "@data-types/cityData";
 import type { Order } from "@data-types/order";
 import * as d3 from "d3";
 import Papa from "papaparse";
@@ -35,6 +36,15 @@ function orderFromCSV(csv: any): Order {
     };
 }
 
+function cityGeoFromCSV(csv: any): CityGeoData {
+    return {
+        city: csv['city'],
+        country: csv['country'],
+        lat: Number(csv['lat']),
+        lng: Number(csv['lng']),
+    }
+}
+
 // cache data in localStorage
 export async function loadData(): Promise<Order[]> {
     // if (localStorage.getItem("orders")) {
@@ -68,4 +78,30 @@ export async function loadGeographyData(): Promise<any> {
     );
     // localStorage.setItem("world", JSON.stringify(world));
     return world;
+}
+
+export async function loadCityLatLngData(): Promise<any> {
+    const resp = await fetch(asset('/data/worldcities.csv'));
+    const text = await resp.text();
+    const csv = 
+        Papa.parse<Record<string, any>>(text, {
+            header: true,
+            skipEmptyLines: true,
+        }).data ?? []
+    const list = csv.map(cityGeoFromCSV);
+    
+    const out: any = {};
+    list.forEach(c => {
+        if (!out[c.country]) {
+            out[c.country] = {};
+        }
+
+        out[c.country][c.city] = {
+            lat: c.lat,
+            lng: c.lng,
+        };
+    });
+
+    console.log(out);
+    return out;
 }

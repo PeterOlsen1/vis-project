@@ -12,3 +12,10 @@ export type CityData = {
     x: number,
     y: number,
 }
+
+export type CityGeoData = {
+    city: string,
+    country: string,
+    lat: number,
+    lng: number,
+}

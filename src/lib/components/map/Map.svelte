@@ -3,9 +3,9 @@
     import * as d3 from "d3";
     import { onMount } from "svelte";
     import { bucketByFrequency } from "@utils/bucketData";
-    import { loadGeographyData } from "@utils/loadData";
+    import { loadCityLatLngData, loadGeographyData } from "@utils/loadData";
     import { Loader } from '@components/loader';
-    import type { City, CityData } from "@data-types/cityData";
+    import type { City, CityData, CityGeoData } from "@data-types/cityData";
     import Page from "../../../routes/+page.svelte";
 
     type Props = {
@@ -19,6 +19,7 @@
     let { loading, error, data, selectedCountry = $bindable(''), width = 960, height = 650 }: Props = $props();
 
     let geography = $state<any>(null);
+    let cityGeoData = $state<any>(null);
     let tooltip = $state<HTMLDivElement | null>(null);
     let showCircles = $state<boolean>(true);
     let effectRunning = $state<boolean>(true);
@@ -124,10 +125,12 @@
     // load geography data only once on component mount
     onMount(async () => {
         geography = await loadGeographyData();
+        cityGeoData = await loadCityLatLngData();
         updateCityFreqs();
     });
 
     // initial loading of the countries
+    // wrapped in an $effect since it needs to run when data is updated
     $effect(() => {
         if (loading || error || !data || !geography) {
             return;
@@ -173,41 +176,60 @@
     })
 
     // load circles
+    // runs when data is manipulated, but returns quickly if the circles have been created already
+    // this is to avoid heavy re-computation every time cityFreqs is changed
     $effect(() => {
-        if (loading || error || !data || !geography || !g || circlesCreated) {
+        if (loading || error || !data || !geography || !g || circlesCreated || !cityGeoData) {
             return;
         }
 
         const cityGroup = d3.select(g).append("g").attr("class", "cities");
         
+        console.log(cityGeoData);
         let cityData: CityData[] = [];
         loopOverCityFreqs((country, city) => {
+            if (!cityGeoData[country]) {
+                console.log(`Country ${country} not found in cityGeoData!`);
+                return;
+            }
+            if (!cityGeoData[country][city]) {
+                // console.log(`${city}, ${country} not found in cityGeoData`);
+                return;
+            }
             const normalizedCountry = normalizeCountryName(country);
             
-            // this is slow operation O(n). use hashmap that points to indicies instead?
-            const countryFeature = geography.features.find(
-                (f: any) => f.properties.name === normalizedCountry
-            );
+            // // this is slow operation O(n). use hashmap that points to indicies instead?
+            // const countryFeature = geography.features.find(
+            //     (f: any) => f.properties.name === normalizedCountry
+            // );
             
-            if (!countryFeature) {
-                console.warn(`Country not found: ${country} (normalized: ${normalizedCountry})`);
-                return null;
+            // if (!countryFeature) {
+            //     console.warn(`Country not found: ${country} (normalized: ${normalizedCountry})`);
+            //     return null;
+            // }
+            
+            // const centroid = path.centroid(countryFeature);
+            // const bounds = path.bounds(countryFeature);
+            
+            // const hash = city.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            // const offsetX = ((hash % 100) - 50) / 100 * (bounds[1][0] - bounds[0][0]) * 0.3;
+            // const offsetY = ((hash % 73) - 36) / 100 * (bounds[1][1] - bounds[0][1]) * 0.3;
+
+            const [x, y] = projection([cityGeoData[country][city].lng, cityGeoData[country][city].lat]);
+
+            if (isNaN(x) || isNaN(y)) {
+                console.log('nan!!')
             }
-            
-            const centroid = path.centroid(countryFeature);
-            const bounds = path.bounds(countryFeature);
-            
-            const hash = city.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const offsetX = ((hash % 100) - 50) / 100 * (bounds[1][0] - bounds[0][0]) * 0.3;
-            const offsetY = ((hash % 73) - 36) / 100 * (bounds[1][1] - bounds[0][1]) * 0.3;
             
             cityData.push({
                 city,
                 country,
                 count: cityFreqs[country][city] || 1,
                 normalizedCountry,
-                x: centroid[0] + offsetX,
-                y: centroid[1] + offsetY,
+                // x: centroid[0] + offsetX,
+                // y: centroid[1] + offsetY,
+                x,
+                y,
             });
         });
         cityData = cityData.filter(d => d !== null);
@@ -271,11 +293,14 @@
     });
 
     // toggle circle display
+    // only runs when showCircles is toggled
     $effect(() => {
         if (showCircles) {
-            d3.selectAll('circle').style('display', 'block')
+            d3.selectAll('circle')
+                .attr('display', 'block');
         } else {
-            d3.selectAll('circle').style('display', 'none')
+            d3.selectAll('circle')
+                .attr('display', 'none');
         }
     });
 </script>
