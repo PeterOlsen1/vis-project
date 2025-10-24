@@ -259,10 +259,13 @@
 
     $effect(() => {
         loopOverCityFreqs((country, city) => {
-            const q = `${city}-${country}`
+            const q = `${city}-${country}`;
             const circle = svg?.getElementById(q);
             if (circle) {
-                circle.setAttribute('r', String(getCircleSize(cityFreqs[country][city] || 0)));
+                d3.select(circle)
+                    .transition()
+                    .duration(200)
+                    .attr('r', getCircleSize(cityFreqs[country][city] || 0));
             }
         });
     });
