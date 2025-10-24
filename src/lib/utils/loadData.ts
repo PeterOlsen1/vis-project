@@ -81,27 +81,42 @@ export async function loadGeographyData(): Promise<any> {
 }
 
 export async function loadCityLatLngData(): Promise<any> {
-    const resp = await fetch(asset('/data/worldcities.csv'));
-    const text = await resp.text();
-    const csv = 
-        Papa.parse<Record<string, any>>(text, {
-            header: true,
-            skipEmptyLines: true,
-        }).data ?? []
-    const list = csv.map(cityGeoFromCSV);
+  const resp = await fetch(asset('/data/worldcities.csv'));
+  const text = await resp.text();
+  const csv =
+    Papa.parse<Record<string, any>>(text, {
+      header: true,
+      skipEmptyLines: true,
+    }).data ?? []
+  
+  // Country name mappings (Worldcities country : Map country)
+  const countryNameMap: Record<string, string> = {
+    'Congo (Brazzaville)': 'Republic of the Congo',
+    'Congo (Kinshasa)': 'Democratic Republic of the Congo',
+    'Korea, South': 'South Korea',
+    'Korea, North': 'North Korea',
+    "Czechia": "Czech Republic",
+    "Burma": "Myanmar (Burma)",
+    "Eswatini": "Swaziland",
+    "North Macedonia": "Macedonia",
+    "Côte d’Ivoire": "Côte-d'Ivoire",
+  };
+  
+  const list = csv.map(cityGeoFromCSV);
+  const out: any = {};
+  
+  list.forEach(c => {
+    const country = countryNameMap[c.country] || c.country;
     
-    const out: any = {};
-    list.forEach(c => {
-        if (!out[c.country]) {
-            out[c.country] = {};
-        }
-
-        out[c.country][c.city] = {
-            lat: c.lat,
-            lng: c.lng,
-        };
-    });
-
-    console.log(out);
-    return out;
+    if (!out[country]) {
+      out[country] = {};
+    }
+    out[country][c.city] = {
+      lat: c.lat,
+      lng: c.lng,
+    };
+  });
+  
+  console.log(out);
+  return out;
 }

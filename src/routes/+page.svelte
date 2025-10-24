@@ -21,7 +21,7 @@
 </script>
 
 <main>
-    Yous selected: {selectedCountry}
+    You selected: {selectedCountry}
     <Map {loading} {data} {error} bind:selectedCountry={selectedCountry}/>
 </main>
 
