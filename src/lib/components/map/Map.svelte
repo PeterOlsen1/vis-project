@@ -116,7 +116,7 @@ function updateCountryFreqsWithDateFilter() {
   
   if (startDate || endDate) {
     filteredOrders = orderData.state.filter(order => {
-      const orderDate = new Date(order.order_date);
+      const orderDate = new Date(order.orderDate);
       if (startDate && orderDate < startDate) return false;
       if (endDate && orderDate > endDate) return false;
       return true;
