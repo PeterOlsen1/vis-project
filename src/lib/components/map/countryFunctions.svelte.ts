@@ -19,17 +19,6 @@ export function getCountryFreqs(orders: Order[]): Record<string, number> {
     return out;
 }
 
-const countryColorScale: any = $derived.by(() => {
-    if (!countryFreqs.state) {
-        return;
-    }
-
-    return d3.scaleLog<string>()
-        //@ts-ignore - it works, don't care
-        .domain([1, d3.max(Object.values(countryFreqs.state)) || 1])
-        .range(["#f0f9e8", "#0868ac"])
-});
-
 export function loadCountries(projection: any) {
     if (!geography.state || !countryFreqs.state) {
         return;
@@ -52,23 +41,16 @@ export function loadCountries(projection: any) {
         .enter()
         .append("path")
         .attr("d", (d: any) => path(d))
-        .attr("fill", "#ccc")
-        .attr("stroke", "#333");
+        .attr("fill", "#e0e0e0")
+        .attr("stroke", "#999")
+        .attr("stroke-width", 0.5)
+        .attr("data-country", (d: any, i: number) => geographyState.features[i].properties.name);
 
     selection.each((d: any, i, nodes) => {
         const ele = nodes[i];
         const country = geographyState.features[i].properties.name;
-        const value = countryFreqs.state[country] || 0;
-        const fill = countryColorScale(value) || 'white';
 
         d3.select(ele)
-            .attr("fill", fill)
-            .on("mouseover", function () {
-                ele.setAttribute("fill", "orange");
-            })
-            .on("mouseout", function () {
-                ele.setAttribute("fill", fill);
-            })
             .on("click", () => {
                 selectedCountry.state = selectedCountry.state == country ? '' : country;
             });
