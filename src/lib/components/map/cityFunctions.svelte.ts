@@ -73,17 +73,27 @@ export function updateCircleSize() {
 
 
 // renders circles on the map. should only really be used once
-export function renderCircles(projection: any) {
-    if (!orderData.state.length || !g || circlesCreated || !cityGeoData.state) {
+export function renderCircles(projection: any, targetG: SVGGElement | null, selectedCountry:string) {
+
+    if (!orderData.state.length || !targetG || !cityGeoData.state) {
+        return;
+    }
+    if(circlesCreated && selectedCountry === ""){
         return;
     }
 
     const geoData = cityGeoData.state;
-    const cityGroup = d3.select(g.state).append("g").attr("class", "cities");
+    const cityGroup = d3.select(targetG).append("g").attr("class", "cities");
+    if(selectedCountry === "USA"){
+        selectedCountry = "United States"
+    } // very hacky fix for the naming mismatch between country and selectedCountry
     
     let cityData: CityData[] = [];
     mapCityFreqs((country, city) => {
         if (!geoData[country] || !geoData[country][city]) {
+            return;
+        }
+        if (country !== selectedCountry && "" !== selectedCountry){
             return;
         }
 
@@ -148,6 +158,7 @@ export function renderCircles(projection: any) {
             // clicking on two dots in the same coutnry de-selects the country
             selectedCountry.state = selectedCountry.state === d.normalizedCountry ? '' : d.normalizedCountry;
         });
-
-    circlesCreated = true;
+    if(selectedCountry === ""){
+        circlesCreated = true;
+    }
 }

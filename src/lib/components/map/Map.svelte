@@ -54,11 +54,17 @@ const projection = d3
 // Color scale for heatmap
 let colorScale: d3.ScaleSequential<string> | null = null;
 
-function updateHeatmap() {
-  if (!g.state || !countryFreqs.state) return;
+function updateHeatmap(
+  targetG: SVGGElement | null,
+  freqs: Record<string, number>,
+  mode: 'heatmap' | 'circles' = mapMode
+) {
+  // if (!g.state || !countryFreqs.state) return;
+  if (!targetG || !freqs) return;
+
   
   // Get all order counts
-  const counts = Object.values(countryFreqs.state);
+  const counts = Object.values(freqs);
   const maxCount = Math.max(...counts, 1);
   
   // Create color scale from light to dark blue
@@ -67,12 +73,14 @@ function updateHeatmap() {
     .interpolator(d3.interpolateBlues);
   
   // Update country colors
-  d3.select(g.state)
+  d3.select(targetG)
+  
     .selectAll('path')
     .each(function() {
       const path = d3.select(this);
       const countryName = path.attr('data-country');
-      const count = countryFreqs.state[countryName] || 0;
+      const count = freqs[countryName] || 0;
+      
       
       if (mapMode === 'heatmap') {
         path
@@ -157,7 +165,7 @@ $effect(() => {
 // runs when data is manipulated, but returns quickly if the circles have been created already
 // this is to avoid heavy re-computation every time cityFreqs is changed
 $effect(() => {
-  renderCircles(projection);
+  renderCircles(projection, g.state, "");
 });
 
 $effect(() => {
@@ -219,7 +227,7 @@ $effect(() => {
 // Update heatmap when country frequencies change or when switching to heatmap mode
 $effect(() => {
   if (mapMode === 'heatmap' && countryFreqs.state && g.state) {
-    updateHeatmap();
+    updateHeatmap(g.state, countryFreqs.state);
     
     // Add hover interactions for heatmap after updating colors
     d3.select(g.state)
@@ -249,6 +257,75 @@ $effect(() => {
       });
   }
 });
+
+$effect(() => {
+  if (!_selectedCountry.state|| !geography.state) return;
+  const countryData = geography.state.features.filter(
+    f => f.properties.name === _selectedCountry.state
+  );
+  renderCountryOverlay(500, 300, countryData); // hard coded width and height, should probably come up with a better solution
+});
+
+$effect(() => {  
+  if (!_selectedCountry.state) {
+    d3.select("#country-overlay").selectAll("path").remove();
+  }
+});
+
+
+function renderCountryOverlay(width:number, height:number, countryData: any[]) {
+
+  const projection = d3.geoMercator()
+    .fitSize([width, height], countryData[0]);
+
+  const path = d3.geoPath().projection(projection);
+
+  const svg = d3.select("#country-overlay")
+    .attr("viewBox", [0, 0, width, height])
+    .attr("width", width)
+    .attr("height", height);
+  
+  svg.selectAll("*").remove(); 
+
+  const g = svg.append("g");
+  g.selectAll("path")
+    .data(countryData)
+    .join("path")
+    .attr("d", path)
+    .attr("data-country", d => d.properties.name)
+    .attr('fill', '#e0e0e0')
+    .attr('stroke', '#999')
+    .attr('stroke-width', 0.5)
+    .attr('opacity', 1);
+
+
+  const zoom: d3.ZoomBehavior<SVGSVGElement, unknown> = d3.zoom<SVGSVGElement, unknown>()
+    .extent([[0, 0], [width, height]])
+    .scaleExtent([1, 40])
+    .on("zoom", ({ transform }) => {
+      g.attr("transform", transform.toString());
+    d3.select(g.node())
+      .selectAll('circle')
+      .attr('transform', d => `translate(${transform.apply([d.x, d.y])}) scale(${transform.k})`);
+    });
+      
+  svg.call(zoom);
+  if (mapMode === "heatmap") {
+    updateHeatmap(g.node(),countryFreqs.state,mapMode)
+  }
+  if (mapMode === 'circles') {
+    renderCircles(projection, g.node(), _selectedCountry.state);
+  }
+  
+  g.selectAll(".outline")
+    .data(countryData)
+    .join("path")
+    .attr("class", "outline")
+    .attr("d", path)
+    .attr("fill", "none")      
+    .attr("stroke", "black")   
+    .attr("stroke-width", 1);
+}
 </script>
 
 <main>
@@ -330,6 +407,13 @@ $effect(() => {
       >
     </div>
   </div>
+  {#if _selectedCountry.state}
+  <div class="country-overlay">
+      <button onclick={() => _selectedCountry.state = ''}>&nbsp;[X]&nbsp;</button>
+    <svg id="country-overlay" width="600" height="400"></svg>
+  </div>
+  {/if}
+
 </main>
 
 <style>
@@ -341,6 +425,7 @@ $effect(() => {
     padding: 2rem;
     max-width: 1400px;
     margin: 0 auto;
+    position: relative;
   }
 
   .controls-header {
@@ -543,4 +628,23 @@ $effect(() => {
       padding: 1rem;
     }
   }
+
+  .country-overlay {
+  position: absolute;
+  top: 50px;
+  right: 50px;
+  width: 600px;
+  height: 400px;
+  background: white;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.country-overlay svg {
+  width: 100%;
+  height: 100%;
+}
 </style>
