@@ -43,8 +43,8 @@ let {
 
 $inspect(_selectedCountry);
 
-type MapMode = 'circles' | 'heatmap';
-let mapMode = $state<MapMode>('circles');
+let showHeatmap = $state(false);
+let showCirclesToggle = $state(true);
 
 const projection = d3
   .geoMercator()
@@ -57,12 +57,10 @@ let colorScale: d3.ScaleSequential<string> | null = null;
 function updateHeatmap(
   targetG: SVGGElement | null,
   freqs: Record<string, number>,
-  mode: 'heatmap' | 'circles' = mapMode
+  enabled: boolean
 ) {
-  // if (!g.state || !countryFreqs.state) return;
   if (!targetG || !freqs) return;
 
-  
   // Get all order counts
   const counts = Object.values(freqs);
   const maxCount = Math.max(...counts, 1);
@@ -74,21 +72,18 @@ function updateHeatmap(
   
   // Update country colors
   d3.select(targetG)
-  
     .selectAll('path')
     .each(function() {
       const path = d3.select(this);
       const countryName = path.attr('data-country');
       const count = freqs[countryName] || 0;
       
-      
-      if (mapMode === 'heatmap') {
+      if (enabled) {
         path
           .attr('fill', colorScale ? colorScale(count) : '#e0e0e0')
           .attr('stroke', '#fff')
           .attr('stroke-width', 0.5);
       } else {
-        
         path
           .attr('fill', '#e0e0e0')
           .attr('stroke', '#999')
@@ -177,35 +172,50 @@ $effect(() => {
   updateCircleSize();
 });
 
-// Handle mode switching
+// Handle heatmap toggle
 $effect(() => {
-  if (mapMode === 'circles') {
-    showCircles.state = true;
-    hideTooltip();
+  if (g.state && countryFreqs.state) {
+    updateHeatmap(g.state, countryFreqs.state, showHeatmap);
     
-    // Reset country colors and restore original handlers
-    if (g.state) {
+    if (showHeatmap) {
+      // Add hover interactions for heatmap
       d3.select(g.state)
         .selectAll('path')
-        .attr('fill', '#e0e0e0')
-        .attr('stroke', '#999')
-        .attr('stroke-width', 0.5)
-        .attr('opacity', 1)
+        .each(function() {
+          const path = d3.select(this);
+          const countryName = path.attr('data-country');
+          
+          path
+            .on('mouseover', function(event) {
+              const currentCount = countryFreqs.state[countryName] || 0;
+              path.attr('opacity', 0.7);
+              showTooltip(event, countryName, currentCount);
+            })
+            .on('mouseout', function() {
+              path.attr('opacity', 1);
+              hideTooltip();
+            })
+            .on('mousemove', function(event) {
+              const currentCount = countryFreqs.state[countryName] || 0;
+              showTooltip(event, countryName, currentCount);
+            });
+        });
+    } else {
+      // Remove hover interactions
+      d3.select(g.state)
+        .selectAll('path')
         .on('mouseover', null)
         .on('mouseout', null)
-        .on('mousemove', null);
+        .on('mousemove', null)
+        .attr('opacity', 1);
+      hideTooltip();
     }
-    
-    // Ensure circles are visible
-    if (svg.state) {
-      d3.select(svg.state)
-        .selectAll('circle')
-        .attr('display', 'block');
-    }
-  } else {
-    showCircles.state = false;
-    // Heatmap mode - will be updated by the separate effect below
   }
+});
+
+// Handle circles toggle
+$effect(() => {
+  showCircles.state = showCirclesToggle;
 });
 
 // toggle circle display
@@ -224,37 +234,10 @@ $effect(() => {
   }
 });
 
-// Update heatmap when country frequencies change or when switching to heatmap mode
+// Update heatmap when country frequencies change
 $effect(() => {
-  if (mapMode === 'heatmap' && countryFreqs.state && g.state) {
-    updateHeatmap(g.state, countryFreqs.state);
-    
-    // Add hover interactions for heatmap after updating colors
-    d3.select(g.state)
-      .selectAll('path')
-      .each(function() {
-        const path = d3.select(this);
-        const countryName = path.attr('data-country');
-        
-        path
-          .on('mouseover', function(event) {
-            // Get the current count from the latest state
-            const currentCount = countryFreqs.state[countryName] || 0;
-            
-            // Darken on hover
-            path.attr('opacity', 0.7);
-            showTooltip(event, countryName, currentCount);
-          })
-          .on('mouseout', function() {
-            path.attr('opacity', 1);
-            hideTooltip();
-          })
-          .on('mousemove', function(event) {
-            // Get the current count from the latest state
-            const currentCount = countryFreqs.state[countryName] || 0;
-            showTooltip(event, countryName, currentCount);
-          });
-      });
+  if (countryFreqs.state && g.state) {
+    updateHeatmap(g.state, countryFreqs.state, showHeatmap);
   }
 });
 
@@ -310,10 +293,10 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     });
       
   svg.call(zoom);
-  if (mapMode === "heatmap") {
-    updateHeatmap(g.node(),countryFreqs.state,mapMode)
+  if (showHeatmap) {
+    updateHeatmap(g.node(), countryFreqs.state, showHeatmap);
   }
-  if (mapMode === 'circles') {
+  if (showCirclesToggle) {
     renderCircles(projection, g.node(), _selectedCountry.state);
   }
   
@@ -332,35 +315,40 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
   <div class="tooltip" bind:this={tooltip.state}></div>
   
   <div class="controls-header">
-    <div class="tab-buttons">
-      <button 
-        class="tab-btn"
-        class:active={mapMode === 'circles'}
-        onclick={() => mapMode = 'circles'}
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
-          <circle cx="10" cy="10" r="3" fill="currentColor"/>
-        </svg>
-        Circle Map
-      </button>
-      <button 
-        class="tab-btn"
-        class:active={mapMode === 'heatmap'}
-        onclick={() => mapMode = 'heatmap'}
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
-          <rect x="5" y="5" width="4" height="4" fill="currentColor" opacity="0.3"/>
-          <rect x="11" y="5" width="4" height="4" fill="currentColor" opacity="0.6"/>
-          <rect x="5" y="11" width="4" height="4" fill="currentColor" opacity="0.6"/>
-          <rect x="11" y="11" width="4" height="4" fill="currentColor" opacity="0.9"/>
-        </svg>
-        Heatmap
-      </button>
+    <div class="checkbox-controls">
+      <label class="checkbox-label">
+        <input 
+          type="checkbox" 
+          bind:checked={showCirclesToggle}
+        />
+        <span class="checkbox-text">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
+            <circle cx="10" cy="10" r="3" fill="currentColor"/>
+          </svg>
+          Show Circles
+        </span>
+      </label>
+      
+      <label class="checkbox-label">
+        <input 
+          type="checkbox" 
+          bind:checked={showHeatmap}
+        />
+        <span class="checkbox-text">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            <rect x="5" y="5" width="4" height="4" fill="currentColor" opacity="0.3"/>
+            <rect x="11" y="5" width="4" height="4" fill="currentColor" opacity="0.6"/>
+            <rect x="5" y="11" width="4" height="4" fill="currentColor" opacity="0.6"/>
+            <rect x="11" y="11" width="4" height="4" fill="currentColor" opacity="0.9"/>
+          </svg>
+          Show Heatmap
+        </span>
+      </label>
     </div>
     
-    {#if mapMode === 'heatmap'}
+    {#if showHeatmap}
       <div class="legend">
         <span class="legend-label">Order Volume:</span>
         <div class="legend-container">
@@ -437,46 +425,48 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     gap: 1.5rem;
   }
 
-  .tab-buttons {
+  .checkbox-controls {
     display: flex;
-    gap: 0;
-    background: #f0f0f0;
-    border-radius: 10px;
-    padding: 4px;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .tab-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    background: transparent;
-    color: #666;
-    font-weight: 600;
-    font-size: 0.95rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-  }
-
-  .tab-btn:hover {
-    color: #333;
-  }
-
-  .tab-btn.active {
+    gap: 1.5rem;
     background: white;
-    color: #4a90e2;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .tab-btn svg {
-    transition: all 0.2s ease;
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
   }
 
-  .tab-btn.active svg {
+  .checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #4a90e2;
+  }
+
+  .checkbox-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+  }
+
+  .checkbox-label:hover .checkbox-text {
+    color: #4a90e2;
+  }
+
+  .checkbox-label input[type="checkbox"]:checked + .checkbox-text {
+    color: #4a90e2;
+  }
+
+  .checkbox-label input[type="checkbox"]:checked + .checkbox-text svg {
     color: #4a90e2;
   }
 
@@ -601,13 +591,10 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
       align-items: stretch;
     }
 
-    .tab-buttons {
+    .checkbox-controls {
       width: 100%;
-    }
-
-    .tab-btn {
-      flex: 1;
-      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
     }
 
     .legend {
