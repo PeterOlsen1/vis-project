@@ -21,6 +21,8 @@ import {
 } from "./mapStates.svelte";
 import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
 import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
+import { startAnimation } from "./animation.svelte";
+import { loadStartEndDate } from "./utils";
 
 // make the props as minimal as possible so that other people can easily hook into the map
 type Props = {
@@ -165,6 +167,7 @@ onMount(async () => {
   geography.state = await loadGeographyData();
   cityGeoData.state = await loadCityLatLngData();
   loadCountries(projection);
+  loadStartEndDate();
 });
 
 $effect(() => {
@@ -195,7 +198,6 @@ $effect(() => {
 });
 
 $effect(() => {
-  console.log('circle size effect');
   updateCircleSize();
 });
 
@@ -240,7 +242,6 @@ $effect(() => {
   }
 });
 
-// Handle circles toggle
 $effect(() => {
   showCircles.state = showCirclesToggle;
 });
@@ -261,13 +262,6 @@ $effect(() => {
   }
 });
 
-// Update heatmap when country frequencies change
-$effect(() => {
-  if (countryFreqs.state && g.state) {
-    updateHeatmap(g.state, countryFreqs.state, showHeatmap);
-  }
-});
-
 $effect(() => {
   if (!_selectedCountry.state|| !geography.state) return;
   const countryData = geography.state.features.filter(
@@ -281,7 +275,6 @@ $effect(() => {
     d3.select("#country-overlay").selectAll("path").remove();
   }
 });
-
 
 function renderCountryOverlay(width:number, height:number, countryData: any[]) {
 
@@ -336,6 +329,7 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     .attr("stroke", "black")   
     .attr("stroke-width", 1);
 }
+
 </script>
 
 <main>
@@ -438,6 +432,21 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
         bind:value={endDateRaw.state}
         min={startDateRaw.state || ''}
       >
+    </div>
+  </div>
+  <br>
+  <div class="date-controls">
+    <div class="control-group">
+      <button
+        onclick={startAnimation}
+      >
+        start animation
+      </button>
+    </div>
+    <div class="control-group">
+      <div>
+        more user options
+      </div>
     </div>
   </div>
   {#if _selectedCountry.state}

@@ -24,10 +24,17 @@ let showCircles = $state<StateWrapper<boolean>>(makeStateWrapper(true));
 let startDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
 let endDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
 
+// singletons
+let dataStartDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
+let dataEndDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
+
 // map elements
 let svg = $state<StateWrapper<SVGSVGElement | null>>(makeStateWrapper(null));
 let g = $state<StateWrapper<SVGGElement | null>>(makeStateWrapper(null));
 let tooltip = $state<StateWrapper<HTMLDivElement | null>>(makeStateWrapper(null));
+
+//animation
+let animationDate = $state<StateWrapper<Date>>(makeStateWrapper(new Date()));
 
 export {
     orderData,
@@ -43,4 +50,7 @@ export {
     tooltip,
     countryFreqs,
     cityFreqs,
+    animationDate,
+    dataStartDate,
+    dataEndDate
 }
