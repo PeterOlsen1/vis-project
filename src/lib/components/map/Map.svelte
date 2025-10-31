@@ -43,8 +43,35 @@ let {
 
 $inspect(_selectedCountry);
 
+type CircleMetric = 'orders' | 'profit' | 'sales' | 'quantity' | 'shipping' | 'discount';
+type HeatmapMetric = 'shipping_mode' | 'segment' | 'orders' | 'category' | 'sales' | 'discounts' | 'profit' | 'shipping_cost' | 'priority' | 'quantity';
+
 let showHeatmap = $state(false);
 let showCirclesToggle = $state(true);
+let circleMetric = $state<CircleMetric>('orders');
+let heatmapMetric = $state<HeatmapMetric>('orders');
+
+const circleMetricLabels: Record<CircleMetric, string> = {
+  'orders': 'Total Number of Orders',
+  'profit': "Seller's Profit",
+  'sales': 'Sales Cost',
+  'quantity': 'Quantity Bought',
+  'shipping': 'Shipping Cost',
+  'discount': 'Average Discount on Cities'
+};
+
+const heatmapMetricLabels: Record<HeatmapMetric, string> = {
+  'shipping_mode': 'Shipping Mode',
+  'segment': 'Segment',
+  'orders': 'Total Number of Orders',
+  'category': 'Order Category',
+  'sales': 'Sales',
+  'discounts': 'Discounts',
+  'profit': "Seller's Profit",
+  'shipping_cost': 'Shipping Cost',
+  'priority': 'Order Priority',
+  'quantity': 'Quantity Bought'
+};
 
 const projection = d3
   .geoMercator()
@@ -315,27 +342,36 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
   <div class="tooltip" bind:this={tooltip.state}></div>
   
   <div class="controls-header">
-    <div class="checkbox-controls">
-      <label class="checkbox-label">
-        <input 
-          type="checkbox" 
-          bind:checked={showCirclesToggle}
-        />
-        <span class="checkbox-text">
+    <div class="map-controls">
+      <div class="control-item">
+        <label class="checkbox-label">
+          <input 
+            type="checkbox" 
+            bind:checked={showCirclesToggle}
+          />
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
             <circle cx="10" cy="10" r="3" fill="currentColor"/>
           </svg>
-          Show Circles
-        </span>
-      </label>
+          <span class="label-text">Circle Map</span>
+        </label>
+        
+        {#if showCirclesToggle}
+          <select bind:value={circleMetric} class="metric-select">
+            {#each Object.entries(circleMetricLabels) as [value, label]}
+              <option value={value}>{label}</option>
+            {/each}
+          </select>
+          <span class="selected-metric">{circleMetricLabels[circleMetric]}</span>
+        {/if}
+      </div>
       
-      <label class="checkbox-label">
-        <input 
-          type="checkbox" 
-          bind:checked={showHeatmap}
-        />
-        <span class="checkbox-text">
+      <div class="control-item">
+        <label class="checkbox-label">
+          <input 
+            type="checkbox" 
+            bind:checked={showHeatmap}
+          />
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
             <rect x="5" y="5" width="4" height="4" fill="currentColor" opacity="0.3"/>
@@ -343,9 +379,18 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
             <rect x="5" y="11" width="4" height="4" fill="currentColor" opacity="0.6"/>
             <rect x="11" y="11" width="4" height="4" fill="currentColor" opacity="0.9"/>
           </svg>
-          Show Heatmap
-        </span>
-      </label>
+          <span class="label-text">Heatmap</span>
+        </label>
+        
+        {#if showHeatmap}
+          <select bind:value={heatmapMetric} class="metric-select">
+            {#each Object.entries(heatmapMetricLabels) as [value, label]}
+              <option value={value}>{label}</option>
+            {/each}
+          </select>
+          <span class="selected-metric">{heatmapMetricLabels[heatmapMetric]}</span>
+        {/if}
+      </div>
     </div>
     
     {#if showHeatmap}
@@ -425,19 +470,26 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     gap: 1.5rem;
   }
 
-  .checkbox-controls {
+  .map-controls {
     display: flex;
-    gap: 1.5rem;
+    gap: 2rem;
     background: white;
     border-radius: 10px;
     padding: 1rem 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex-wrap: wrap;
+  }
+
+  .control-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   .checkbox-label {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     cursor: pointer;
     user-select: none;
   }
@@ -449,25 +501,55 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     accent-color: #4a90e2;
   }
 
-  .checkbox-text {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  .checkbox-label svg {
+    color: #666;
+    transition: color 0.2s;
+  }
+
+  .checkbox-label input[type="checkbox"]:checked ~ svg {
+    color: #4a90e2;
+  }
+
+  .label-text {
     font-weight: 600;
     font-size: 0.95rem;
     color: #333;
   }
 
-  .checkbox-label:hover .checkbox-text {
+  .checkbox-label:hover .label-text {
     color: #4a90e2;
   }
 
-  .checkbox-label input[type="checkbox"]:checked + .checkbox-text {
+  .checkbox-label input[type="checkbox"]:checked ~ .label-text {
     color: #4a90e2;
   }
 
-  .checkbox-label input[type="checkbox"]:checked + .checkbox-text svg {
-    color: #4a90e2;
+  .metric-select {
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    background: #fafafa;
+    color: #333;
+    font-weight: 500;
+    transition: all 0.2s;
+    min-width: 200px;
+  }
+
+  .metric-select:hover {
+    border-color: #4a90e2;
+  }
+
+  .metric-select:focus {
+    outline: none;
+    border-color: #4a90e2;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+  }
+
+  .selected-metric {
+    display: none;
   }
 
   .legend {
@@ -591,10 +673,20 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
       align-items: stretch;
     }
 
-    .checkbox-controls {
+    .map-controls {
       width: 100%;
       flex-direction: column;
       gap: 1rem;
+    }
+
+    .control-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .metric-select {
+      width: 100%;
     }
 
     .legend {
@@ -617,21 +709,21 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
   }
 
   .country-overlay {
-  position: absolute;
-  top: 50px;
-  right: 50px;
-  width: 600px;
-  height: 400px;
-  background: white;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
+    position: absolute;
+    top: 50px;
+    right: 50px;
+    width: 600px;
+    height: 400px;
+    background: white;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
 
-.country-overlay svg {
-  width: 100%;
-  height: 100%;
-}
+  .country-overlay svg {
+    width: 100%;
+    height: 100%;
+  }
 </style>
