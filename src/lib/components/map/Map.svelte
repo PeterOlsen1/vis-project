@@ -57,7 +57,7 @@ const circleMetricLabels: Record<CircleMetric, string> = {
   'sales': 'Sales Cost',
   'quantity': 'Quantity Bought',
   'shipping': 'Shipping Cost',
-  'discount': 'Average Discount on Cities'
+  'discount': 'Discounts'
 };
 
 const heatmapMetricLabels: Record<HeatmapMetric, string> = {
@@ -186,18 +186,21 @@ $effect(() => {
 // load circles
 // runs when data is manipulated, but returns quickly if the circles have been created already
 // this is to avoid heavy re-computation every time cityFreqs is changed
+
 $effect(() => {
-  renderCircles(projection, g.state, "");
+  renderCircles(projection, g.state, "", circleMetric);
 });
 
 $effect(() => {
-  cityFreqs.state = updateCityFreqs();
+  cityFreqs.state = updateCityFreqs(circleMetric);
 });
 
 $effect(() => {
   console.log('circle size effect');
-  updateCircleSize();
+  updateCircleSize(circleMetric);
 });
+
+
 
 // Handle heatmap toggle
 $effect(() => {
