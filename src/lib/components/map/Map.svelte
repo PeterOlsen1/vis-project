@@ -20,7 +20,7 @@ import {
   cityFreqs,
 } from "./mapStates.svelte";
 import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
-import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
+import { loadCountries, getCountryFreqs, getCountryMetricData } from "./countryFunctions.svelte";
 
 // make the props as minimal as possible so that other people can easily hook into the map
 type Props = {
@@ -47,9 +47,10 @@ type CircleMetric = 'orders' | 'profit' | 'sales' | 'quantity' | 'shipping' | 'd
 type HeatmapMetric = 'shipping_mode' | 'segment' | 'orders' | 'category' | 'sales' | 'discounts' | 'profit' | 'shipping_cost' | 'priority' | 'quantity';
 
 let showHeatmap = $state(false);
-let showCirclesToggle = $state(true);
+let showCirclesToggle = $state(false);
 let circleMetric = $state<CircleMetric>('orders');
 let heatmapMetric = $state<HeatmapMetric>('orders');
+let countryMetricData = $state<Record<string, any>>({});
 
 const circleMetricLabels: Record<CircleMetric, string> = {
   'orders': 'Total Number of Orders',
@@ -80,22 +81,185 @@ const projection = d3
 
 // Color scale for heatmap
 let colorScale: d3.ScaleSequential<string> | null = null;
+let legendData = $state<{ type: 'gradient' | 'categorical', items?: { color: string, label: string }[], gradient?: { min: number | string, max: number | string } } | null>(null);
+
+function getMostCommonCategory(obj: Record<string, number>): string {
+  return Object.entries(obj).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+}
+
+function getColorForMetric(countryData: any, metric: HeatmapMetric): string {
+  if (!countryData) return '#e0e0e0';
+  
+  const categoricalColors: Record<string, string> = {
+    'Standard Class': '#3182bd',
+    'First Class': '#e6550d',
+    'Second Class': '#31a354',
+    'Same Day': '#756bb1',
+    'Consumer': '#3182bd',
+    'Corporate': '#e6550d',
+    'Home Office': '#31a354',
+    'Technology': '#3182bd',
+    'Office Supplies': '#e6550d',
+    'Furniture': '#31a354',
+    'Medium': '#3182bd',
+    'High': '#e6550d',
+    'Low': '#31a354',
+    'Critical': '#756bb1'
+  };
+  
+  switch(metric) {
+    case 'shipping_mode':
+      const topShipMode = getMostCommonCategory(countryData.shippingMode);
+      return categoricalColors[topShipMode] || '#e0e0e0';
+    case 'segment':
+      const topSegment = getMostCommonCategory(countryData.segment);
+      return categoricalColors[topSegment] || '#e0e0e0';
+    case 'category':
+      const topCategory = getMostCommonCategory(countryData.category);
+      return categoricalColors[topCategory] || '#e0e0e0';
+    case 'priority':
+      const topPriority = getMostCommonCategory(countryData.priority);
+      return categoricalColors[topPriority] || '#e0e0e0';
+    case 'orders':
+      return colorScale ? colorScale(countryData.orders) : '#e0e0e0';
+    case 'sales': {
+      const totalSales = countryData.sales.reduce((a: number, b: number) => a + b, 0);
+      return colorScale ? colorScale(totalSales) : '#e0e0e0';
+    }
+    case 'discounts': {
+      const avgDiscount = countryData.discount.reduce((a: number, b: number) => a + b, 0) / countryData.discount.length;
+      return colorScale ? colorScale(avgDiscount) : '#e0e0e0';
+    }
+    case 'profit': {
+      const totalProfit = countryData.profit.reduce((a: number, b: number) => a + b, 0);
+      return colorScale ? colorScale(totalProfit) : '#e0e0e0';
+    }
+    case 'shipping_cost': {
+      const avgShipping = countryData.shipping.reduce((a: number, b: number) => a + b, 0) / countryData.shipping.length;
+      return colorScale ? colorScale(avgShipping) : '#e0e0e0';
+    }
+    case 'quantity':
+      return colorScale ? colorScale(countryData.quantity) : '#e0e0e0';
+    default:
+      return '#e0e0e0';
+  }
+}
+
+function setupColorScale(metric: HeatmapMetric, data: Record<string, any>) {
+  const values = Object.values(data);
+  
+  switch(metric) {
+    case 'orders': {
+      const counts = values.map((d: any) => d.orders);
+      const maxCount = Math.max(...counts, 1);
+      colorScale = d3.scaleSequential()
+        .domain([0, maxCount])
+        .interpolator(d3.interpolateBlues);
+      legendData = { type: 'gradient', gradient: { min: 0, max: maxCount } };
+      break;
+    }
+    case 'sales': {
+      const totals = values.map((d: any) => d.sales.reduce((a: number, b: number) => a + b, 0));
+      const maxSales = Math.max(...totals, 1);
+      colorScale = d3.scaleSequential()
+        .domain([0, maxSales])
+        .interpolator(d3.interpolateBlues);
+      legendData = { type: 'gradient', gradient: { min: '$0', max: `$${Math.round(maxSales).toLocaleString()}` } };
+      break;
+    }
+    case 'discounts': {
+      const discounts = values.map((d: any) => d.discount.reduce((a: number, b: number) => a + b, 0) / d.discount.length);
+      const maxDiscount = Math.max(...discounts, 0.01);
+      colorScale = d3.scaleSequential()
+        .domain([0, maxDiscount])
+        .interpolator(d3.interpolateBlues);
+      legendData = { type: 'gradient', gradient: { min: '0%', max: `${(maxDiscount * 100).toFixed(1)}%` } };
+      break;
+    }
+    case 'profit': {
+      const totals = values.map((d: any) => d.profit.reduce((a: number, b: number) => a + b, 0));
+      const maxProfit = Math.max(...totals, 1);
+      const minProfit = Math.min(...totals, 0);
+      colorScale = d3.scaleSequential()
+        .domain([minProfit, maxProfit])
+        .interpolator(d3.interpolateBlues);
+      const minLabel = minProfit < 0 ? `-$${Math.abs(Math.round(minProfit)).toLocaleString()}` : `$${Math.round(minProfit).toLocaleString()}`;
+      legendData = { type: 'gradient', gradient: { min: minLabel, max: `$${Math.round(maxProfit).toLocaleString()}` } };
+      break;
+    }
+    case 'shipping_cost': {
+      const avgs = values.map((d: any) => d.shipping.reduce((a: number, b: number) => a + b, 0) / d.shipping.length);
+      const maxShipping = Math.max(...avgs, 1);
+      colorScale = d3.scaleSequential()
+        .domain([0, maxShipping])
+        .interpolator(d3.interpolateBlues);
+      legendData = { type: 'gradient', gradient: { min: '$0', max: `$${maxShipping.toFixed(2)}` } };
+      break;
+    }
+    case 'quantity': {
+      const quantities = values.map((d: any) => d.quantity);
+      const maxQty = Math.max(...quantities, 1);
+      colorScale = d3.scaleSequential()
+        .domain([0, maxQty])
+        .interpolator(d3.interpolateBlues);
+      legendData = { type: 'gradient', gradient: { min: 0, max: maxQty } };
+      break;
+    }
+    case 'shipping_mode':
+      legendData = {
+        type: 'categorical',
+        items: [
+          { color: '#3182bd', label: 'Standard Class' },
+          { color: '#e6550d', label: 'First Class' },
+          { color: '#31a354', label: 'Second Class' },
+          { color: '#756bb1', label: 'Same Day' }
+        ]
+      };
+      break;
+    case 'segment':
+      legendData = {
+        type: 'categorical',
+        items: [
+          { color: '#3182bd', label: 'Consumer' },
+          { color: '#e6550d', label: 'Corporate' },
+          { color: '#31a354', label: 'Home Office' }
+        ]
+      };
+      break;
+    case 'category':
+      legendData = {
+        type: 'categorical',
+        items: [
+          { color: '#3182bd', label: 'Technology' },
+          { color: '#e6550d', label: 'Office Supplies' },
+          { color: '#31a354', label: 'Furniture' }
+        ]
+      };
+      break;
+    case 'priority':
+      legendData = {
+        type: 'categorical',
+        items: [
+          { color: '#3182bd', label: 'Medium' },
+          { color: '#e6550d', label: 'High' },
+          { color: '#31a354', label: 'Low' },
+          { color: '#756bb1', label: 'Critical' }
+        ]
+      };
+      break;
+  }
+}
 
 function updateHeatmap(
   targetG: SVGGElement | null,
-  freqs: Record<string, number>,
-  enabled: boolean
+  metricData: Record<string, any>,
+  enabled: boolean,
+  metric: HeatmapMetric
 ) {
-  if (!targetG || !freqs) return;
+  if (!targetG || !metricData || Object.keys(metricData).length === 0) return;
 
-  // Get all order counts
-  const counts = Object.values(freqs);
-  const maxCount = Math.max(...counts, 1);
-  
-  // Create color scale from light to dark blue
-  colorScale = d3.scaleSequential()
-    .domain([0, maxCount])
-    .interpolator(d3.interpolateBlues);
+  // Setup color scale based on metric - this will update legendData
+  setupColorScale(metric, metricData);
   
   // Update country colors
   d3.select(targetG)
@@ -103,11 +267,11 @@ function updateHeatmap(
     .each(function() {
       const path = d3.select(this);
       const countryName = path.attr('data-country');
-      const count = freqs[countryName] || 0;
+      const countryData = metricData[countryName];
       
-      if (enabled) {
+      if (enabled && countryData) {
         path
-          .attr('fill', colorScale ? colorScale(count) : '#e0e0e0')
+          .attr('fill', getColorForMetric(countryData, metric))
           .attr('stroke', '#fff')
           .attr('stroke-width', 0.5);
       } else {
@@ -120,13 +284,89 @@ function updateHeatmap(
 }
 
 // Tooltip functions for heatmap
-function showTooltip(event: MouseEvent, countryName: string, count: number) {
-  if (!tooltip.state) return;
+function showTooltip(event: MouseEvent, countryName: string, countryData: any, metric: HeatmapMetric) {
+  if (!tooltip.state || !countryData) return;
+  
+  let tooltipContent = `<strong>${countryName}</strong><br/>`;
+  
+  switch(metric) {
+    case 'orders':
+      tooltipContent += `Total Orders: ${countryData.orders.toLocaleString()}`;
+      break;
+    case 'shipping_mode':
+      tooltipContent += `Standard Class: ${countryData.shippingMode['Standard Class']}<br/>`;
+      tooltipContent += `First Class: ${countryData.shippingMode['First Class']}<br/>`;
+      tooltipContent += `Second Class: ${countryData.shippingMode['Second Class']}<br/>`;
+      tooltipContent += `Same Day: ${countryData.shippingMode['Same Day']}`;
+      break;
+    case 'segment':
+      tooltipContent += `Consumer: ${countryData.segment['Consumer']}<br/>`;
+      tooltipContent += `Corporate: ${countryData.segment['Corporate']}<br/>`;
+      tooltipContent += `Home Office: ${countryData.segment['Home Office']}`;
+      break;
+    case 'category':
+      tooltipContent += `Technology: ${countryData.category['Technology']}<br/>`;
+      tooltipContent += `Office Supplies: ${countryData.category['Office Supplies']}<br/>`;
+      tooltipContent += `Furniture: ${countryData.category['Furniture']}`;
+      break;
+    case 'sales': {
+      const sales = countryData.sales;
+      const minSales = Math.min(...sales);
+      const maxSales = Math.max(...sales);
+      const avgSales = sales.reduce((a: number, b: number) => a + b, 0) / sales.length;
+      tooltipContent += `Lowest: $${minSales.toFixed(2)}<br/>`;
+      tooltipContent += `Average: $${avgSales.toFixed(2)}<br/>`;
+      tooltipContent += `Highest: $${maxSales.toFixed(2)}`;
+      break;
+    }
+    case 'discounts': {
+      const avgDiscount = countryData.discount.reduce((a: number, b: number) => a + b, 0) / countryData.discount.length;
+      tooltipContent += `Average Discount: ${(avgDiscount * 100).toFixed(1)}%`;
+      break;
+    }
+    case 'profit': {
+      const profits = countryData.profit;
+      const totalProfit = profits.reduce((a: number, b: number) => a + b, 0);
+      const avgProfit = totalProfit / profits.length;
+      const minProfit = Math.min(...profits);
+      const maxProfit = Math.max(...profits);
+      const totalLabel = totalProfit < 0 ? `-$${Math.abs(totalProfit).toFixed(2)}` : `$${totalProfit.toFixed(2)}`;
+      const avgLabel = avgProfit < 0 ? `-$${Math.abs(avgProfit).toFixed(2)}` : `$${avgProfit.toFixed(2)}`;
+      const minLabel = minProfit < 0 ? `-$${Math.abs(minProfit).toFixed(2)}` : `$${minProfit.toFixed(2)}`;
+      const maxLabel = maxProfit < 0 ? `-$${Math.abs(maxProfit).toFixed(2)}` : `$${maxProfit.toFixed(2)}`;
+      tooltipContent += `Total Profit: ${totalLabel}<br/>`;
+      tooltipContent += `Average: ${avgLabel}<br/>`;
+      tooltipContent += `Lowest: ${minLabel}<br/>`;
+      tooltipContent += `Highest: ${maxLabel}`;
+      break;
+    }
+    case 'shipping_cost': {
+      const shipping = countryData.shipping;
+      const minShip = Math.min(...shipping);
+      const maxShip = Math.max(...shipping);
+      const avgShip = shipping.reduce((a: number, b: number) => a + b, 0) / shipping.length;
+      tooltipContent += `Lowest: $${minShip.toFixed(2)}<br/>`;
+      tooltipContent += `Average: $${avgShip.toFixed(2)}<br/>`;
+      tooltipContent += `Highest: $${maxShip.toFixed(2)}`;
+      break;
+    }
+    case 'priority':
+      const total = countryData.priority['Medium'] + countryData.priority['High'] + 
+                    countryData.priority['Low'] + countryData.priority['Critical'];
+      tooltipContent += `Medium: ${countryData.priority['Medium']} (${((countryData.priority['Medium']/total)*100).toFixed(1)}%)<br/>`;
+      tooltipContent += `High: ${countryData.priority['High']} (${((countryData.priority['High']/total)*100).toFixed(1)}%)<br/>`;
+      tooltipContent += `Low: ${countryData.priority['Low']} (${((countryData.priority['Low']/total)*100).toFixed(1)}%)<br/>`;
+      tooltipContent += `Critical: ${countryData.priority['Critical']} (${((countryData.priority['Critical']/total)*100).toFixed(1)}%)`;
+      break;
+    case 'quantity':
+      tooltipContent += `Total Quantity: ${countryData.quantity.toLocaleString()}`;
+      break;
+  }
   
   const tooltipEl = d3.select(tooltip.state);
   tooltipEl
     .style('display', 'block')
-    .html(`<strong>${countryName}</strong><br/>Total Orders: ${count.toLocaleString()}`)
+    .html(tooltipContent)
     .style('left', `${event.pageX + 10}px`)
     .style('top', `${event.pageY - 10}px`);
 }
@@ -136,8 +376,8 @@ function hideTooltip() {
   d3.select(tooltip.state).style('display', 'none');
 }
 
-// Function to update country frequencies based on date range
-function updateCountryFreqsWithDateFilter() {
+// Function to update country metric data based on date range
+function updateCountryMetricDataWithDateFilter() {
   if (!orderData.state) return;
   
   const startDate = startDateRaw.state ? new Date(startDateRaw.state) : null;
@@ -153,11 +393,9 @@ function updateCountryFreqsWithDateFilter() {
     });
   }
   
-  // Update country frequencies with filtered data
-  const newFreqs = getCountryFreqs(filteredOrders);
-  
-  // Force update by creating a new object
-  countryFreqs.state = { ...newFreqs };
+  // Update country metric data with filtered data
+  countryMetricData = getCountryMetricData(filteredOrders, heatmapMetric);
+  countryFreqs.state = getCountryFreqs(filteredOrders);
 }
 
 // load geography data only once on component mount
@@ -174,38 +412,39 @@ $effect(() => {
   orderData.state = data;
 });
 
-// Update country frequencies when date range changes
+// Update country metric data when date range or metric changes
 $effect(() => {
-  if (orderData.state && (startDateRaw.state || endDateRaw.state)) {
-    updateCountryFreqsWithDateFilter();
+  if (orderData.state && (startDateRaw.state || endDateRaw.state || heatmapMetric)) {
+    updateCountryMetricDataWithDateFilter();
   } else if (orderData.state) {
+    countryMetricData = getCountryMetricData(orderData.state, heatmapMetric);
     countryFreqs.state = getCountryFreqs(orderData.state);
   }
 });
 
-// load circles
-// runs when data is manipulated, but returns quickly if the circles have been created already
-// this is to avoid heavy re-computation every time cityFreqs is changed
-
+// load circles - only when checkbox is toggled
 $effect(() => {
-  renderCircles(projection, g.state, "", circleMetric);
+  if (showCirclesToggle) {
+    renderCircles(projection, g.state, "", circleMetric);
+  }
 });
 
 $effect(() => {
-  cityFreqs.state = updateCityFreqs(circleMetric);
+  if (showCirclesToggle) {
+    cityFreqs.state = updateCityFreqs(circleMetric);
+  }
 });
 
 $effect(() => {
-  console.log('circle size effect');
-  updateCircleSize(circleMetric);
+  if (showCirclesToggle) {
+    updateCircleSize(circleMetric);
+  }
 });
 
-
-
-// Handle heatmap toggle
+// Handle heatmap toggle and metric changes
 $effect(() => {
-  if (g.state && countryFreqs.state) {
-    updateHeatmap(g.state, countryFreqs.state, showHeatmap);
+  if (g.state && countryMetricData && Object.keys(countryMetricData).length > 0) {
+    updateHeatmap(g.state, countryMetricData, showHeatmap, heatmapMetric);
     
     if (showHeatmap) {
       // Add hover interactions for heatmap
@@ -214,20 +453,19 @@ $effect(() => {
         .each(function() {
           const path = d3.select(this);
           const countryName = path.attr('data-country');
+          const countryData = countryMetricData[countryName];
           
           path
             .on('mouseover', function(event) {
-              const currentCount = countryFreqs.state[countryName] || 0;
               path.attr('opacity', 0.7);
-              showTooltip(event, countryName, currentCount);
+              showTooltip(event, countryName, countryData, heatmapMetric);
             })
             .on('mouseout', function() {
               path.attr('opacity', 1);
               hideTooltip();
             })
             .on('mousemove', function(event) {
-              const currentCount = countryFreqs.state[countryName] || 0;
-              showTooltip(event, countryName, currentCount);
+              showTooltip(event, countryName, countryData, heatmapMetric);
             });
         });
     } else {
@@ -249,7 +487,6 @@ $effect(() => {
 });
 
 // toggle circle display
-// only runs when showCircles is toggled
 $effect(() => {
   if (!svg.state) return;
   
@@ -264,19 +501,12 @@ $effect(() => {
   }
 });
 
-// Update heatmap when country frequencies change
-$effect(() => {
-  if (countryFreqs.state && g.state) {
-    updateHeatmap(g.state, countryFreqs.state, showHeatmap);
-  }
-});
-
 $effect(() => {
   if (!_selectedCountry.state|| !geography.state) return;
   const countryData = geography.state.features.filter(
     f => f.properties.name === _selectedCountry.state
   );
-  renderCountryOverlay(500, 300, countryData); // hard coded width and height, should probably come up with a better solution
+  renderCountryOverlay(500, 300, countryData);
 });
 
 $effect(() => {  
@@ -323,8 +553,8 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     });
       
   svg.call(zoom);
-  if (showHeatmap) {
-    updateHeatmap(g.node(), countryFreqs.state, showHeatmap);
+  if (showHeatmap && countryMetricData && Object.keys(countryMetricData).length > 0) {
+    updateHeatmap(g.node(), countryMetricData, showHeatmap, heatmapMetric);
   }
   if (showCirclesToggle) {
     renderCircles(projection, g.node(), _selectedCountry.state);
@@ -396,15 +626,26 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
       </div>
     </div>
     
-    {#if showHeatmap}
+    {#if showHeatmap && legendData}
       <div class="legend">
-        <span class="legend-label">Order Volume:</span>
-        <div class="legend-container">
-          <div class="legend-gradient"></div>
-          <div class="legend-labels">
-            <span>Low</span>
-            <span>High</span>
-          </div>
+        <span class="legend-label">{heatmapMetricLabels[heatmapMetric]}:</span>
+        <div class="legend-content">
+          {#if legendData.type === 'gradient' && legendData.gradient}
+            <div class="legend-gradient"></div>
+            <div class="legend-labels">
+              <span>{legendData.gradient.min}</span>
+              <span>{legendData.gradient.max}</span>
+            </div>
+          {:else if legendData.type === 'categorical' && legendData.items}
+            <div class="legend-categorical">
+              {#each legendData.items as item}
+                <div class="legend-item">
+                  <div class="legend-color" style="background-color: {item.color}"></div>
+                  <span>{item.label}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
     {/if}
@@ -571,7 +812,7 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     color: #333;
   }
 
-  .legend-container {
+  .legend-content {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -589,6 +830,31 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     display: flex;
     justify-content: space-between;
     width: 150px;
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .legend-categorical {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+
+  .legend-item span {
     font-size: 0.75rem;
     color: #666;
     font-weight: 500;
