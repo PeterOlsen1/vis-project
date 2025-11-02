@@ -1,0 +1,1 @@
+export type CityMetric = 'orders' | 'profit' | 'sales' | 'quantity' | 'shipping' | 'discount';

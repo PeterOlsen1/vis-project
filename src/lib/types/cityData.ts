@@ -7,7 +7,6 @@ export type City = {
 export type CityData = {
     city: string,
     country: string,
-    count: number,
     normalizedCountry: string,
     x: number,
     y: number,
@@ -19,3 +18,13 @@ export type CityGeoData = {
     lat: number,
     lng: number,
 }
+
+export type CityMetricData = {
+    orders: number;
+    sales: number;
+    profit: number;
+    quantity: number;
+    shipping: number;
+    discount: number;
+    maxDiscount: number; // Track highest discount
+};

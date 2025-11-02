@@ -17,17 +17,17 @@ import {
   tooltip,
   countriesLoading,
   countryFreqs,
-  cityFreqs,
   animationTimeframe,
   animationPlaying,
-  dataEndDate,
-  animationDate,
   animationDelay,
+  circlesRendered,
+  circleMetric,
+  cityMetrics,
 } from "./mapStates.svelte";
-import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
+import { updateCityMetrics, renderCircles, updateCircleSize, updateScale } from "./circleFunctions.svelte";
 import { startAnimation, pauseAnimation, stopAnimation, handleDelayChange } from "./animation.svelte";
 import { loadStartEndDate } from "./utils";
-import { loadCountries, getCountryFreqs, getCountryMetricData } from "./countryFunctions.svelte";
+import { loadCountries, getCountryFreqs, getCountryMetricData } from "./heatmapFunctions.svelte";
 
 // make the props as minimal as possible so that other people can easily hook into the map
 type Props = {
@@ -48,16 +48,14 @@ let {
   height = 650 
 }: Props = $props();
 
-type CircleMetric = 'orders' | 'profit' | 'sales' | 'quantity' | 'shipping' | 'discount';
+type CityMetric = 'orders' | 'profit' | 'sales' | 'quantity' | 'shipping' | 'discount';
 type HeatmapMetric = 'shipping_mode' | 'segment' | 'orders' | 'category' | 'sales' | 'discounts' | 'profit' | 'shipping_cost' | 'priority' | 'quantity';
 
 let showHeatmap = $state(false);
-let showCirclesToggle = $state(false);
-let circleMetric = $state<CircleMetric>('orders');
 let heatmapMetric = $state<HeatmapMetric>('orders');
 let countryMetricData = $state<Record<string, any>>({});
 
-const circleMetricLabels: Record<CircleMetric, string> = {
+const circleMetricLabels: Record<CityMetric, string> = {
   'orders': 'Total Number of Orders',
   'profit': "Seller's Profit",
   'sales': 'Sales Cost',
@@ -430,20 +428,22 @@ $effect(() => {
 
 // load circles - only when checkbox is toggled
 $effect(() => {
-  if (showCirclesToggle) {
-    renderCircles(projection, g.state, "", circleMetric);
+  if (showCircles.state) {
+    renderCircles(projection, g.state);
   }
 });
 
 $effect(() => {
-  if (showCirclesToggle) {
-    cityFreqs.state = updateCityFreqs(circleMetric);
-  }
+  updateScale();
+})
+
+$effect(() => {
+  cityMetrics.state = updateCityMetrics();
 });
 
 $effect(() => {
-  if (showCirclesToggle) {
-    updateCircleSize(circleMetric);
+  if (showCircles.state) {
+    updateCircleSize();
   }
 });
 
@@ -487,10 +487,6 @@ $effect(() => {
   }
 });
 
-$effect(() => {
-  showCircles.state = showCirclesToggle;
-});
-
 // toggle circle display
 $effect(() => {
   if (!svg.state) return;
@@ -509,7 +505,7 @@ $effect(() => {
 $effect(() => {
   if (!_selectedCountry.state|| !geography.state) return;
   const countryData = geography.state.features.filter(
-    f => f.properties.name === _selectedCountry.state
+    (f: any) => f.properties.name === _selectedCountry.state
   );
   renderCountryOverlay(500, 300, countryData);
 });
@@ -560,8 +556,8 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
   if (showHeatmap && countryMetricData && Object.keys(countryMetricData).length > 0) {
     updateHeatmap(g.node(), countryMetricData, showHeatmap, heatmapMetric);
   }
-  if (showCirclesToggle) {
-    renderCircles(projection, g.node(), _selectedCountry.state);
+  if (showCircles.state) {
+    renderCircles(projection, g.node());
   }
   
   g.selectAll(".outline")
@@ -585,7 +581,7 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
         <label class="checkbox-label">
           <input 
             type="checkbox" 
-            bind:checked={showCirclesToggle}
+            bind:checked={showCircles.state}
           />
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
@@ -594,13 +590,13 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
           <span class="label-text">Circle Map</span>
         </label>
         
-        {#if showCirclesToggle}
-          <select bind:value={circleMetric} class="metric-select">
+        {#if showCircles.state}
+          <select bind:value={circleMetric.state} class="metric-select">
             {#each Object.entries(circleMetricLabels) as [value, label]}
               <option value={value}>{label}</option>
             {/each}
           </select>
-          <span class="selected-metric">{circleMetricLabels[circleMetric]}</span>
+          <span class="selected-metric">{circleMetricLabels[circleMetric.state]}</span>
         {/if}
       </div>
       

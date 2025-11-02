@@ -1,6 +1,8 @@
 // The purpose of this file is so that we can use these states across many .svelte and .svelte.ts files
 // I know it looks stupid, but it's really good for code reusability
 import type { Order } from "@data-types/order";
+import type { CityMetricData } from "@data-types/cityData";
+import type { CityMetric } from "@data-types/circleMetric";
 
 export type StateWrapper<T> = { state: T }
 function makeStateWrapper<T>(p: T): StateWrapper<T> {
@@ -19,10 +21,12 @@ let countriesLoading = $state<StateWrapper<boolean>>(makeStateWrapper(true));
 let selectedCountry = $state<StateWrapper<string>>(makeStateWrapper(''));
 
 let countryFreqs = $state<any>({});
-let cityFreqs = $state<StateWrapper<Record<string, Record<string, number>>>>(makeStateWrapper({}));
+let cityMetrics = $state<StateWrapper<Record<string, Record<string, CityMetricData>>>>(makeStateWrapper({}));
+let circleMetric = $state<StateWrapper<CityMetric>>(makeStateWrapper('orders'));
+let circlesRendered = $state<StateWrapper<boolean>>(makeStateWrapper(false));
 
 // these three will likely be used in the form, which we should break into a separate component
-let showCircles = $state<StateWrapper<boolean>>(makeStateWrapper(true));
+let showCircles = $state<StateWrapper<boolean>>(makeStateWrapper(false));
 let startDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
 let endDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
 
@@ -34,6 +38,7 @@ let dataEndDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
 let svg = $state<StateWrapper<SVGSVGElement | null>>(makeStateWrapper(null));
 let g = $state<StateWrapper<SVGGElement | null>>(makeStateWrapper(null));
 let tooltip = $state<StateWrapper<HTMLDivElement | null>>(makeStateWrapper(null));
+let radiusScale = $state<StateWrapper<d3.ScalePower<number, number, never> | null>>(makeStateWrapper(null));
 
 //animation
 let animationDate = $state<StateWrapper<Date>>(makeStateWrapper(new Date()));
@@ -42,6 +47,7 @@ let animationPlaying = $state<StateWrapper<AnimationState>>(makeStateWrapper('st
 let animationDelay = $state<StateWrapper<number>>(makeStateWrapper(100));
 
 export {
+    circlesRendered,
     orderData,
     cityGeoData,
     geography,
@@ -50,11 +56,13 @@ export {
     showCircles,
     startDateRaw,
     endDateRaw,
+    cityMetrics,
+    circleMetric,
     g,
     svg,
     tooltip,
+    radiusScale,
     countryFreqs,
-    cityFreqs,
     animationDate,
     dataStartDate,
     dataEndDate,

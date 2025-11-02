@@ -1,4 +1,4 @@
-import { dataEndDate, dataStartDate, orderData } from "./mapStates.svelte";
+import { dataEndDate, dataStartDate, orderData, cityMetrics, circleMetric, circlesRendered } from "./mapStates.svelte";
 
 export const normalizeCountryName = (name: string): string => {
     // dataset country name : geography country name
@@ -50,4 +50,46 @@ export function toHTMLFormat(date: Date): string {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+export function getMetricValue(country: string, city: string): number {
+    if (!cityMetrics.state[country]?.[city]) return 0;
+    
+    const data = cityMetrics.state[country][city];
+    
+    switch (circleMetric.state) {
+        case 'orders':
+            return data.orders;
+        case 'sales':
+            return data.sales;
+        case 'profit':
+            return data.profit;
+        case 'quantity':
+            return data.quantity;
+        case 'shipping':
+            return data.shipping;
+        case 'discount':
+            // Return average discount
+            return data.orders > 0 ? data.discount / data.orders : 0;
+        default:
+            return data.orders;
+    }
+}
+
+export function getScaleRange(): [number, number] {
+    switch (circleMetric.state) {
+        case 'sales':
+            return [3, 30]; // Larger range for sales visibility
+        case 'shipping':
+            return [3, 25]; 
+        case 'profit':
+            return [3, 28]; // For profit use absolute values
+        case 'quantity':
+            return [3, 30];
+        case 'discount':
+            return [3, 22];
+        case 'orders':
+        default:
+            return [3, 35];
+    }
 }
