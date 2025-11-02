@@ -35,6 +35,7 @@ let tooltip = $state<StateWrapper<HTMLDivElement | null>>(makeStateWrapper(null)
 
 //animation
 let animationDate = $state<StateWrapper<Date>>(makeStateWrapper(new Date()));
+let animationTimeframe = $state<StateWrapper<string>>(makeStateWrapper('week'));
 
 export {
     orderData,
@@ -52,5 +53,6 @@ export {
     cityFreqs,
     animationDate,
     dataStartDate,
-    dataEndDate
+    dataEndDate,
+    animationTimeframe
 }

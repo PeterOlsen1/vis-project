@@ -1,4 +1,4 @@
-import { endDateRaw, startDateRaw, dataEndDate, dataStartDate } from "./mapStates.svelte";
+import { endDateRaw, startDateRaw, dataEndDate, dataStartDate, animationTimeframe } from "./mapStates.svelte";
 
 let originalStartDate: string|null;
 let originalEndDate: string|null;
@@ -13,6 +13,7 @@ export function startAnimation() {
     }
 
     console.log('animation started!!!');
+    console.log(originalStartDate);
     let startDate = new Date(startDateRaw.state);
     let endDate = new Date(endDateRaw.state);
 
@@ -38,7 +39,10 @@ export function startAnimation() {
 }
 
 export function pauseAnimation() {
-    
+    if (interval) {
+        clearInterval(interval);
+        interval = null;
+    }
 }
 
 export function stopAnimation() {

@@ -18,6 +18,7 @@ import {
   countriesLoading,
   countryFreqs,
   cityFreqs,
+  animationTimeframe
 } from "./mapStates.svelte";
 import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
 import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
@@ -457,6 +458,16 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
           <rect x="5" y="5" width="10" height="10" fill="currentColor"/>
         </svg>
       </button>
+    </div>
+    <div class="control-group">
+      <label for="timeframe-input">
+        Timeframe
+      </label>
+      <select name="timeframe" id="timeframe-input" bind:value={animationTimeframe.state}>
+        <option value="day">Day</option>
+        <option value="week">Week</option>
+        <option value="month">Month</option>
+      </select>
     </div>
   </div>
   {#if _selectedCountry.state}
