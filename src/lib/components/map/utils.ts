@@ -1,3 +1,5 @@
+import { dataEndDate, dataStartDate, orderData } from "./mapStates.svelte";
+
 export const normalizeCountryName = (name: string): string => {
     // dataset country name : geography country name
     const countryMap: Record<string, string> = {
@@ -17,4 +19,35 @@ export const getCircleSize = (v: number): number => {
 
 export const getHoveredCircleSize = (v: number): number => {
     return Math.sqrt(v) * 1.5;
+}
+
+export const loadStartEndDate = () => {
+    console.log('loading start/end dates');
+    const orders = orderData.state;
+    let lowestDate = new Date();
+    lowestDate.setFullYear(2500); // will break in like 500 years...
+
+    let highestDate = new Date();
+    highestDate.setFullYear(1900);
+
+    for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
+        if (order.orderDate > highestDate) {
+            highestDate = order.orderDate;
+        }
+        else if (order.orderDate < lowestDate) {
+            lowestDate = order.orderDate;
+        }
+    }
+
+    dataEndDate.state = highestDate;
+    dataStartDate.state = lowestDate;
+}
+
+// ai generated, html input dates are annoying
+export function toHTMLFormat(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }

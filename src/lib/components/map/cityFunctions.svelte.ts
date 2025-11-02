@@ -1,4 +1,3 @@
-import type { Order } from "@data-types/order";
 import * as d3 from "d3";
 import type { CityData } from "@data-types/cityData";
 import {

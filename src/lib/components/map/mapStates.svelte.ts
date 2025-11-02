@@ -9,6 +9,8 @@ function makeStateWrapper<T>(p: T): StateWrapper<T> {
     }
 }
 
+type AnimationState = 'playing'|'paused'|'stopped';
+
 
 let orderData = $state<StateWrapper<Order[]>>(makeStateWrapper([]));
 let cityGeoData = $state<any>(makeStateWrapper(null));
@@ -24,10 +26,20 @@ let showCircles = $state<StateWrapper<boolean>>(makeStateWrapper(true));
 let startDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
 let endDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
 
+// singletons
+let dataStartDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
+let dataEndDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
+
 // map elements
 let svg = $state<StateWrapper<SVGSVGElement | null>>(makeStateWrapper(null));
 let g = $state<StateWrapper<SVGGElement | null>>(makeStateWrapper(null));
 let tooltip = $state<StateWrapper<HTMLDivElement | null>>(makeStateWrapper(null));
+
+//animation
+let animationDate = $state<StateWrapper<Date>>(makeStateWrapper(new Date()));
+let animationTimeframe = $state<StateWrapper<string>>(makeStateWrapper('week'));
+let animationPlaying = $state<StateWrapper<AnimationState>>(makeStateWrapper('stopped'));
+let animationDelay = $state<StateWrapper<number>>(makeStateWrapper(100));
 
 export {
     orderData,
@@ -43,4 +55,10 @@ export {
     tooltip,
     countryFreqs,
     cityFreqs,
+    animationDate,
+    dataStartDate,
+    dataEndDate,
+    animationTimeframe,
+    animationPlaying,
+    animationDelay,
 }
