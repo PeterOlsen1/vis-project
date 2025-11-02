@@ -23,7 +23,6 @@ let currentMetric = $state<CityMetric>('orders'); // Track current metric
 let lastMetric = '';
 let radiusScale: any | null;
 
-// const radiusScale = $derived.by(() => {
 export function updateScale() {
     // don't update if metric has not changed
     if (lastMetric && lastMetric == circleMetric.state || JSON.stringify(cityMetrics.state) == '{}') {
@@ -34,7 +33,6 @@ export function updateScale() {
 
     const allValues: number[] = [];
     mapCityMetrics((country, city, data) => {
-        //@ts-ignore string can index this object
         allValues.push(data[circleMetric.state]);
     });
 
@@ -50,7 +48,6 @@ export function updateScale() {
         .domain([0, maxValue])
         .range(scaleRange);
 }
-// });
 
 
 // loops over city buckets and applies callback function with city and country
@@ -78,10 +75,10 @@ export function updateCityMetrics(): typeof cityMetrics.state {
 
         // Check if order is within date range
         if ((start && orderDate < start) || (end && orderDate > end)) continue;
-
+        
         const country = order.country;
         const city = order.city;
-
+        
         // Initialize if needed
         if (!out[country]) out[country] = {};
         if (!metricsOut[country]) metricsOut[country] = {};
@@ -126,7 +123,6 @@ export function updateCircleSize() {
         const q = `${city}-${country}`;
         const circle = svg.state?.getElementById(q);
         if (circle) {
-            //@ts-ignore string can index this
             const value = data[circleMetric.state];
             const radius = metric === 'profit' 
                 ? radiusScale(Math.abs(value))
@@ -296,7 +292,6 @@ export function renderCircles(projection: any, targetG: SVGGElement | null) {
         .attr("cy", d => d.y)
         .attr("r", (d: any) => {
             const absValue = metric === 'profit' ? Math.abs(d.metricValue) : d.metricValue;
-            //@ts-ignore this will not be null
             return radiusScale(absValue);
         })
         .attr("fill", d => metric === 'profit' && d.metricValue < 0 
@@ -308,7 +303,6 @@ export function renderCircles(projection: any, targetG: SVGGElement | null) {
         .on("mouseover", function (event, d) {
             const absValue = metric === 'profit' ? Math.abs(d.metricValue) : d.metricValue;
 
-            //@ts-ignore this will not be null
             const hoveredRadius = radiusScale(absValue) * 1.3;
             const hoverFill = metric === 'profit' && d.metricValue < 0
                 ? "rgba(255, 50, 50, 0.9)"

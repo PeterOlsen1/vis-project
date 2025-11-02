@@ -437,7 +437,6 @@ $effect(() => {
   updateScale();
 })
 
-$inspect(cityMetrics.state);
 $effect(() => {
   cityMetrics.state = updateCityMetrics();
 });
