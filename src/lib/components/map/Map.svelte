@@ -25,7 +25,6 @@ import {
   animationDelay,
 } from "./mapStates.svelte";
 import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
-import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
 import { startAnimation, pauseAnimation, stopAnimation, handleDelayChange } from "./animation.svelte";
 import { loadStartEndDate } from "./utils";
 import { loadCountries, getCountryFreqs, getCountryMetricData } from "./countryFunctions.svelte";
