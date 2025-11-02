@@ -21,7 +21,7 @@ import {
 } from "./mapStates.svelte";
 import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
 import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
-import { startAnimation } from "./animation.svelte";
+import { startAnimation, pauseAnimation, stopAnimation } from "./animation.svelte";
 import { loadStartEndDate } from "./utils";
 
 // make the props as minimal as possible so that other people can easily hook into the map
@@ -437,16 +437,26 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
   <br>
   <div class="date-controls">
     <div class="control-group">
-      <button
-        onclick={startAnimation}
-      >
-        start animation
+      <label>
+        Animation controls
+      </label>
+      <!-- SVGs generated with chat GPT -->
+      <button onclick={startAnimation} aria-label="start animation">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="vertical-align: middle;">
+          <polygon points="5,4 15,10 5,16" fill="currentColor"/>
+        </svg>
       </button>
-    </div>
-    <div class="control-group">
-      <div>
-        more user options
-      </div>
+      <button onclick={pauseAnimation} aria-label="pause animation">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="vertical-align: middle;">
+          <rect x="5" y="4" width="3" height="12" fill="currentColor"/>
+          <rect x="12" y="4" width="3" height="12" fill="currentColor"/>
+        </svg>
+      </button>
+      <button onclick={stopAnimation} aria-label="stop animation">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="vertical-align: middle;">
+          <rect x="5" y="5" width="10" height="10" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
   </div>
   {#if _selectedCountry.state}
@@ -459,6 +469,10 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
 </main>
 
 <style>
+  button {
+    cursor: pointer;
+  }
+
   * {
     transition: all 0.3s ease;
   }

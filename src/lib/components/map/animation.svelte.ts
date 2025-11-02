@@ -37,6 +37,10 @@ export function startAnimation() {
     }, 100);
 }
 
+export function pauseAnimation() {
+    
+}
+
 export function stopAnimation() {
     if (interval) {
         clearInterval(interval);
