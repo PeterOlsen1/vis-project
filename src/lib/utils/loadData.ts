@@ -117,6 +117,5 @@ export async function loadCityLatLngData(): Promise<any> {
     };
   });
   
-  console.log(out);
   return out;
 }

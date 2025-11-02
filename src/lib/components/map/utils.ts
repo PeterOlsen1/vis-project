@@ -22,6 +22,7 @@ export const getHoveredCircleSize = (v: number): number => {
 }
 
 export const loadStartEndDate = () => {
+    console.log('loading start/end dates');
     const orders = orderData.state;
     let lowestDate = new Date();
     lowestDate.setFullYear(2500); // will break in like 500 years...

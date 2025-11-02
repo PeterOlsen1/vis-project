@@ -20,10 +20,13 @@ import {
   cityFreqs,
   animationTimeframe,
   animationPlaying,
+  dataEndDate,
+  animationDate,
+  animationDelay,
 } from "./mapStates.svelte";
 import { updateCityFreqs, renderCircles, updateCircleSize } from "./cityFunctions.svelte";
 import { loadCountries, getCountryFreqs } from "./countryFunctions.svelte";
-import { startAnimation, pauseAnimation, stopAnimation } from "./animation.svelte";
+import { startAnimation, pauseAnimation, stopAnimation, handleDelayChange } from "./animation.svelte";
 import { loadStartEndDate } from "./utils";
 
 // make the props as minimal as possible so that other people can easily hook into the map
@@ -44,8 +47,6 @@ let {
   width = 960, 
   height = 650 
 }: Props = $props();
-
-$inspect(_selectedCountry);
 
 type CircleMetric = 'orders' | 'profit' | 'sales' | 'quantity' | 'shipping' | 'discount';
 type HeatmapMetric = 'shipping_mode' | 'segment' | 'orders' | 'category' | 'sales' | 'discounts' | 'profit' | 'shipping_cost' | 'priority' | 'quantity';
@@ -504,6 +505,12 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
         <option value="month">Month</option>
       </select>
     </div>
+    <div class="control-group">
+      <label for="timeframe-input">
+        Delay (ms)
+      </label>
+      <input type="number" min="50" bind:value={animationDelay.state} onchange={handleDelayChange}>
+    </div>
   </div>
   {#if _selectedCountry.state}
   <div class="country-overlay">
@@ -692,30 +699,30 @@ function renderCountryOverlay(width:number, height:number, countryData: any[]) {
     gap: 0.75rem;
     flex: 1;
     min-width: 250px;
-  }
 
-  .control-group label {
-    font-weight: 600;
-    color: #333;
-    font-size: 0.9rem;
-    white-space: nowrap;
-  }
+    label {
+      font-weight: 600;
+      color: #333;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
 
-  .control-group input[type="date"] {
-    flex: 1;
-    padding: 0.6rem 0.9rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    background: #fafafa;
-  }
+    input[type="date"], input[type="number"] {
+      flex: 1;
+      padding: 0.6rem 0.9rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      background: #fafafa;
 
-  .control-group input[type="date"]:focus {
-    outline: none;
-    border-color: #4a90e2;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+      &:focus {
+        outline: none;
+        border-color: #4a90e2;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1)
+      }
+    }
   }
 
   .tooltip {

@@ -5,24 +5,25 @@ import {
     dataStartDate, 
     animationTimeframe, 
     animationPlaying,
+    animationDelay,
 } from "./mapStates.svelte";
 import { toHTMLFormat } from "./utils";
 
-let originalStartDate: string|null;
-let originalEndDate: string|null;
+let originalStartDate: string | null = '';
+let originalEndDate: string | null = '';
 let interval: NodeJS.Timeout | null;
 
-let animationPaused = false;
+// had weird issues with this, state kept changing when not updated. keep as singleton
+let stopDate: Date | null = null;
 
 const day = 1000 * 60 * 60 * 24;
 
-
-// TODO:
-// fix issue with date timeframe when animation is paused / unpaused
 export function startAnimation() {
     // instantiate singletons
+    if (!stopDate) {
+        stopDate = new Date(dataEndDate.state || '');
+    }
     if (originalStartDate == '') {
-        console.log('setting singletons');
         originalStartDate = startDateRaw.state;
     }
     if (originalEndDate == '') {
@@ -39,9 +40,7 @@ export function startAnimation() {
         endDate = dataEndDate.state;
     }
 
-    const endDateCpy = new Date(endDate.toString());
     const timeframe = animationTimeframe.state;
-
     if (timeframe == 'day') {
         endDate.setTime(startDate.getTime() + day);
     } else if (timeframe == 'week') {
@@ -52,6 +51,12 @@ export function startAnimation() {
 
     animationPlaying.state = 'playing';
     interval = setInterval(() => {
+        if (stopDate && interval && startDate > stopDate) {
+            clearInterval(interval);
+            interval = null;
+            animationPlaying.state = 'stopped';
+        }
+
         if (timeframe == 'day') {
             startDate.setTime(startDate.getTime() + day);
             endDate.setTime(endDate.getTime() + day);
@@ -65,13 +70,7 @@ export function startAnimation() {
 
         startDateRaw.state = toHTMLFormat(startDate);
         endDateRaw.state = toHTMLFormat(endDate);
-
-        if (startDate > endDateCpy && interval) {
-            clearInterval(interval);
-            interval = null;
-            animationPlaying.state = 'stopped';
-        }
-    }, 100);
+    }, animationDelay.state);
 }
 
 // similar to stop animation, but current dates are preserved
@@ -79,9 +78,11 @@ export function pauseAnimation() {
     if (interval) {
         clearInterval(interval);
         interval = null;
-        animationPaused = true;
     }
     animationPlaying.state = 'paused';
+
+    originalStartDate = '';
+    originalEndDate = '';
 }
 
 export function stopAnimation() {
@@ -94,9 +95,15 @@ export function stopAnimation() {
     restoreDates();
 }
 
+export function handleDelayChange() {
+    if (animationPlaying.state == 'playing' && interval) {
+        clearInterval(interval);
+        interval = null;
+        startAnimation();
+    }
+}
+
 function restoreDates() {
-    console.log('originals');
-    console.log(originalStartDate, originalEndDate);
     startDateRaw.state = originalStartDate || '';
     endDateRaw.state = originalEndDate || '';
 
