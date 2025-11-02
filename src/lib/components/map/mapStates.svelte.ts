@@ -9,6 +9,8 @@ function makeStateWrapper<T>(p: T): StateWrapper<T> {
     }
 }
 
+type AnimationState = 'playing'|'paused'|'stopped';
+
 
 let orderData = $state<StateWrapper<Order[]>>(makeStateWrapper([]));
 let cityGeoData = $state<any>(makeStateWrapper(null));
@@ -36,6 +38,7 @@ let tooltip = $state<StateWrapper<HTMLDivElement | null>>(makeStateWrapper(null)
 //animation
 let animationDate = $state<StateWrapper<Date>>(makeStateWrapper(new Date()));
 let animationTimeframe = $state<StateWrapper<string>>(makeStateWrapper('week'));
+let animationPlaying = $state<StateWrapper<AnimationState>>(makeStateWrapper('stopped'));
 
 export {
     orderData,
@@ -54,5 +57,6 @@ export {
     animationDate,
     dataStartDate,
     dataEndDate,
-    animationTimeframe
+    animationTimeframe,
+    animationPlaying,
 }
