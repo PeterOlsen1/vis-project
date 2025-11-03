@@ -3,6 +3,7 @@
     import { loadData } from "@utils/loadData";
     import { onMount } from "svelte";
     import type { Order } from "@data-types/order";
+    import { asset } from "$app/paths";
 
     let data = $state<Order[] | null>(null);
     let error = $state<Error | null>(null);
@@ -20,6 +21,12 @@
     });
 </script>
 
+<svelte:head>
+    <title>
+        Interactive Map Visualization
+    </title>
+    <link rel="icon" href="{asset('/favicon.svg')}">
+</svelte:head>
 <main>
     <!-- would be nice if the selected country bind worked, maybe figure this out later -->
      <!-- not necessary though -->
