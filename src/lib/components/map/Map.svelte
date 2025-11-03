@@ -259,10 +259,12 @@ function updateHeatmap(
   enabled: boolean,
   metric: HeatmapMetric
 ) {
-  if (!targetG || !metricData || Object.keys(metricData).length === 0) return;
+  if (!targetG) return;
 
   // Setup color scale based on metric - this will update legendData
-  setupColorScale(metric, metricData);
+  if (enabled && metricData && Object.keys(metricData).length > 0) {
+    setupColorScale(metric, metricData);
+  }
   
   // Update country colors
   d3.select(targetG)
@@ -270,7 +272,7 @@ function updateHeatmap(
     .each(function() {
       const path = d3.select(this);
       const countryName = path.attr('data-country');
-      const countryData = metricData[countryName];
+      const countryData = metricData?.[countryName];
       
       if (enabled && countryData) {
         path
@@ -285,7 +287,6 @@ function updateHeatmap(
       }
     });
 }
-
 // Tooltip functions for heatmap
 function showTooltip(event: MouseEvent, countryName: string, countryData: any, metric: HeatmapMetric) {
   if (!tooltip.state || !countryData) return;
