@@ -1,5 +1,5 @@
 {
-    "tabWidth": 4,
-    "plugins": ["prettier-plugin-svelte"],
-    "printWidth": 88
+  "tabWidth": 2,
+  "plugins": ["prettier-plugin-svelte"],
+  "printWidth": 88
 }

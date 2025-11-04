@@ -4,78 +4,89 @@ import type { Order } from "@data-types/order";
 import type { CircleMetricData } from "@data-types/cityData";
 import type { HeatmapMetric, CircleMetric } from "@data-types/metrics";
 
-export type StateWrapper<T> = { state: T }
+export type StateWrapper<T> = { state: T };
 function makeStateWrapper<T>(p: T): StateWrapper<T> {
-    return {
-        state: p
-    }
+  return {
+    state: p,
+  };
 }
 
-type AnimationState = 'playing'|'paused'|'stopped';
-
+type AnimationState = "playing" | "paused" | "stopped";
 
 let orderData = $state<StateWrapper<Order[]>>(makeStateWrapper([]));
 let cityGeoData = $state<any>(makeStateWrapper(null));
 let geography = $state<any>(makeStateWrapper(null));
 let countriesLoading = $state<StateWrapper<boolean>>(makeStateWrapper(true));
-let selectedCountry = $state<StateWrapper<string>>(makeStateWrapper(''));
+let selectedCountry = $state<StateWrapper<string>>(makeStateWrapper(""));
 
 // circle states
-let circleMetrics = $state<StateWrapper<Record<string, Record<string, CircleMetricData>>>>(makeStateWrapper({}));
-let circleMetric = $state<StateWrapper<CircleMetric>>(makeStateWrapper('orders'));
+let circleMetrics = $state<
+  StateWrapper<Record<string, Record<string, CircleMetricData>>>
+>(makeStateWrapper({}));
+let circleMetric = $state<StateWrapper<CircleMetric>>(makeStateWrapper("orders"));
 let circlesRendered = $state<StateWrapper<boolean>>(makeStateWrapper(false));
 
 // heatmap states
-let heatmapMetric = $state<StateWrapper<HeatmapMetric>>(makeStateWrapper('orders'));
+let heatmapMetric = $state<StateWrapper<HeatmapMetric>>(makeStateWrapper("orders"));
 let heatmapMetrics = $state<StateWrapper<Record<string, any>>>(makeStateWrapper({}));
 let showHeatmap = $state<StateWrapper<boolean>>(makeStateWrapper(false));
-let legendData = $state<StateWrapper<{ type: 'gradient' | 'categorical', items?: { color: string, label: string }[], gradient?: { min: number | string, max: number | string } } | null>>(makeStateWrapper(null));
+let legendData = $state<
+  StateWrapper<{
+    type: "gradient" | "categorical";
+    items?: { color: string; label: string }[];
+    gradient?: { min: number | string; max: number | string };
+  } | null>
+>(makeStateWrapper(null));
 
 // these three will likely be used in the form, which we should break into a separate component
 let showCircles = $state<StateWrapper<boolean>>(makeStateWrapper(false));
-let startDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
-let endDateRaw = $state<StateWrapper<string>>(makeStateWrapper(''));
+let startDateRaw = $state<StateWrapper<string>>(makeStateWrapper(""));
+let endDateRaw = $state<StateWrapper<string>>(makeStateWrapper(""));
 
 // singletons
-let dataStartDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
-let dataEndDate = $state<StateWrapper<Date|null>>(makeStateWrapper(null));
+let dataStartDate = $state<StateWrapper<Date | null>>(makeStateWrapper(null));
+let dataEndDate = $state<StateWrapper<Date | null>>(makeStateWrapper(null));
 
 // map elements
 let svg = $state<StateWrapper<SVGSVGElement | null>>(makeStateWrapper(null));
 let g = $state<StateWrapper<SVGGElement | null>>(makeStateWrapper(null));
 let tooltip = $state<StateWrapper<HTMLDivElement | null>>(makeStateWrapper(null));
-let radiusScale = $state<StateWrapper<d3.ScalePower<number, number, never> | null>>(makeStateWrapper(null));
+let radiusScale = $state<StateWrapper<d3.ScalePower<number, number, never> | null>>(
+  makeStateWrapper(null),
+);
 
 //animation
 let animationDate = $state<StateWrapper<Date>>(makeStateWrapper(new Date()));
-let animationTimeframe = $state<StateWrapper<string>>(makeStateWrapper('week'));
-let animationPlaying = $state<StateWrapper<AnimationState>>(makeStateWrapper('stopped'));
+let animationTimeframe = $state<StateWrapper<string>>(makeStateWrapper("week"));
+let animationPlaying = $state<StateWrapper<AnimationState>>(
+  makeStateWrapper("stopped"),
+);
 let animationDelay = $state<StateWrapper<number>>(makeStateWrapper(100));
 
 export {
-    circlesRendered,
-    orderData,
-    cityGeoData,
-    geography,
-    selectedCountry,
-    countriesLoading,
-    showCircles,
-    startDateRaw,
-    endDateRaw,
-    circleMetrics,
-    circleMetric,
-    showHeatmap,
-    heatmapMetric,
-    heatmapMetrics,
-    legendData,
-    g,
-    svg,
-    tooltip,
-    radiusScale,
-    animationDate,
-    dataStartDate,
-    dataEndDate,
-    animationTimeframe,
-    animationPlaying,
-    animationDelay,
-}
+  circlesRendered,
+  orderData,
+  cityGeoData,
+  geography,
+  selectedCountry,
+  countriesLoading,
+  showCircles,
+  startDateRaw,
+  endDateRaw,
+  circleMetrics,
+  circleMetric,
+  showHeatmap,
+  heatmapMetric,
+  heatmapMetrics,
+  legendData,
+  g,
+  svg,
+  tooltip,
+  radiusScale,
+  animationDate,
+  dataStartDate,
+  dataEndDate,
+  animationTimeframe,
+  animationPlaying,
+  animationDelay,
+};

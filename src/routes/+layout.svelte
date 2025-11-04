@@ -1,15 +1,15 @@
 <script lang="ts">
-    import "../app.css";
+  import "../app.css";
 
-    let { children } = $props();
+  let { children } = $props();
 </script>
 
 <main
-    class="
+  class="
 		min-h-screen
 		w-screen
 		overflow-x-hidden
 		bg-primary"
 >
-    {@render children?.()}
+  {@render children?.()}
 </main>

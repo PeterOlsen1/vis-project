@@ -2,9 +2,9 @@ name: Build and Deploy to GitHub Pages
 
 on:
   push:
-    branches: 'main'
+    branches: "main"
   pull_request:
-    branches: 'main'
+    branches: "main"
 
 jobs:
   build_site:
@@ -33,11 +33,11 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './deployment/'
+          path: "./deployment/"
 
   deploy:
-    # (optional) Uncomment the line below will deploy to GitHub Pages only if the commit message contains "publish" 
-    # if: contains(github.event.head_commit.message, 'publish')  
+    # (optional) Uncomment the line below will deploy to GitHub Pages only if the commit message contains "publish"
+    # if: contains(github.event.head_commit.message, 'publish')
     needs: build_site
     runs-on: ubuntu-latest
 
