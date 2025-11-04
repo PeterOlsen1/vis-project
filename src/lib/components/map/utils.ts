@@ -1,4 +1,4 @@
-import { dataEndDate, dataStartDate, orderData, cityMetrics, circleMetric, circlesRendered } from "./mapStates.svelte";
+import { dataEndDate, dataStartDate, orderData, circleMetrics, circleMetric, circlesRendered } from "./mapStates.svelte";
 
 export const normalizeCountryName = (name: string): string => {
     // dataset country name : geography country name
@@ -53,9 +53,9 @@ export function toHTMLFormat(date: Date): string {
 }
 
 export function getMetricValue(country: string, city: string): number {
-    if (!cityMetrics.state[country]?.[city]) return 0;
+    if (!circleMetrics.state[country]?.[city]) return 0;
     
-    const data = cityMetrics.state[country][city];
+    const data = circleMetrics.state[country][city];
     
     switch (circleMetric.state) {
         case 'orders':
@@ -92,4 +92,8 @@ export function getScaleRange(): [number, number] {
         default:
             return [3, 35];
     }
+}
+
+export function getMostCommonCategory(obj: Record<string, number>): string {
+  return Object.entries(obj).reduce((a, b) => a[1] > b[1] ? a : b)[0];
 }

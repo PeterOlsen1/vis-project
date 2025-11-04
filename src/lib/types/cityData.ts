@@ -19,7 +19,7 @@ export type CityGeoData = {
     lng: number,
 }
 
-export type CityMetricData = {
+export type CircleMetricData = {
     orders: number;
     sales: number;
     profit: number;

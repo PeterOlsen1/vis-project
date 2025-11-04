@@ -1,8 +1,8 @@
 // The purpose of this file is so that we can use these states across many .svelte and .svelte.ts files
 // I know it looks stupid, but it's really good for code reusability
 import type { Order } from "@data-types/order";
-import type { CityMetricData } from "@data-types/cityData";
-import type { CityMetric } from "@data-types/circleMetric";
+import type { CircleMetricData } from "@data-types/cityData";
+import type { HeatmapMetric, CircleMetric } from "@data-types/metrics";
 
 export type StateWrapper<T> = { state: T }
 function makeStateWrapper<T>(p: T): StateWrapper<T> {
@@ -20,10 +20,16 @@ let geography = $state<any>(makeStateWrapper(null));
 let countriesLoading = $state<StateWrapper<boolean>>(makeStateWrapper(true));
 let selectedCountry = $state<StateWrapper<string>>(makeStateWrapper(''));
 
-let countryFreqs = $state<any>({});
-let cityMetrics = $state<StateWrapper<Record<string, Record<string, CityMetricData>>>>(makeStateWrapper({}));
-let circleMetric = $state<StateWrapper<CityMetric>>(makeStateWrapper('orders'));
+// circle states
+let circleMetrics = $state<StateWrapper<Record<string, Record<string, CircleMetricData>>>>(makeStateWrapper({}));
+let circleMetric = $state<StateWrapper<CircleMetric>>(makeStateWrapper('orders'));
 let circlesRendered = $state<StateWrapper<boolean>>(makeStateWrapper(false));
+
+// heatmap states
+let heatmapMetric = $state<StateWrapper<HeatmapMetric>>(makeStateWrapper('orders'));
+let heatmapMetrics = $state<StateWrapper<Record<string, any>>>(makeStateWrapper({}));
+let showHeatmap = $state<StateWrapper<boolean>>(makeStateWrapper(false));
+let legendData = $state<StateWrapper<{ type: 'gradient' | 'categorical', items?: { color: string, label: string }[], gradient?: { min: number | string, max: number | string } } | null>>(makeStateWrapper(null));
 
 // these three will likely be used in the form, which we should break into a separate component
 let showCircles = $state<StateWrapper<boolean>>(makeStateWrapper(false));
@@ -56,13 +62,16 @@ export {
     showCircles,
     startDateRaw,
     endDateRaw,
-    cityMetrics,
+    circleMetrics,
     circleMetric,
+    showHeatmap,
+    heatmapMetric,
+    heatmapMetrics,
+    legendData,
     g,
     svg,
     tooltip,
     radiusScale,
-    countryFreqs,
     animationDate,
     dataStartDate,
     dataEndDate,

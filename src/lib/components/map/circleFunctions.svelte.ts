@@ -9,30 +9,30 @@ import {
     orderData,
     animationDelay,
     selectedCountry,
-    cityMetrics,
+    circleMetrics,
     circleMetric,
     circlesRendered,
 } from "./mapStates.svelte";
 import { getScaleRange, normalizeCountryName } from "./utils";
-import type { CityMetric } from "@data-types/circleMetric";
-import type { CityMetricData } from "@data-types/cityData";
+import type { CircleMetric } from "@data-types/metrics";
+import type { CircleMetricData } from "@data-types/cityData";
 
 let startDate = $derived<Date>(new Date(startDateRaw.state));
 let endDate = $derived<Date>(new Date(endDateRaw.state));
-let currentMetric = $state<CityMetric>('orders'); // Track current metric
+let currentMetric = $state<CircleMetric>('orders'); // Track current metric
 let lastMetric = '';
 let radiusScale: any | null;
 
-export function updateScale() {
+export function updateRadiusScale() {
     // don't update if metric has not changed
-    if (lastMetric && lastMetric == circleMetric.state || JSON.stringify(cityMetrics.state) == '{}') {
+    if (lastMetric && lastMetric == circleMetric.state || JSON.stringify(circleMetrics.state) == '{}') {
         return;
     } else {
         lastMetric = circleMetric.state;
     }
 
     const allValues: number[] = [];
-    mapCityMetrics((country, city, data) => {
+    mapCircleMetrics((country, city, data) => {
         allValues.push(data[circleMetric.state]);
     });
 
@@ -51,21 +51,21 @@ export function updateScale() {
 
 
 // loops over city buckets and applies callback function with city and country
-function mapCityMetrics(fn: (country: string, city: string, cm: CityMetricData) => void){
-    const state = cityMetrics.state;
+function mapCircleMetrics(fn: (country: string, city: string, cm: CircleMetricData) => void){
+    const state = circleMetrics.state;
 
-    Object.entries(cityMetrics.state).forEach(([country, cities]) => {
+    Object.entries(circleMetrics.state).forEach(([country, cities]) => {
         Object.keys(cities || {}).forEach((city) => fn(country, city, state[country][city]));
     });
 };
 
 // batch updates city buckets variable
 // should realistically only need to happen once
-export function updateCityMetrics(): typeof cityMetrics.state {
+export function updateCircleMetrics(): typeof circleMetrics.state {
     if (!orderData.state) return {};
 
     const out: any = {};
-    const metricsOut: Record<string, Record<string, CityMetricData>> = {};
+    const metricsOut: Record<string, Record<string, CircleMetricData>> = {};
     const start = startDate;
     const end = endDate;
 
@@ -119,7 +119,7 @@ export function updateCircleSize() {
 
     const metric = circleMetric.state;
 
-    mapCityMetrics((country, city, data) => {
+    mapCircleMetrics((country, city, data) => {
         const q = `${city}-${country}`;
         const circle = svg.state?.getElementById(q);
         if (circle) {
@@ -144,9 +144,9 @@ export function updateCircleSize() {
 
 // Format metric value for display in tooltip
 function formatTooltip(city: string, country: string): string {
-    if (!cityMetrics.state[country]?.[city]) return `<strong>${city}</strong>`;
+    if (!circleMetrics.state[country]?.[city]) return `<strong>${city}</strong>`;
     
-    const data = cityMetrics.state[country][city];
+    const data = circleMetrics.state[country][city];
     
     switch (circleMetric.state) {
         case 'profit':
@@ -208,7 +208,7 @@ function formatMetricValue(value: number): string {
 
 // Get metric label
 function getMetricLabel(): string {
-    const labels: Record<CityMetric, string> = {
+    const labels: Record<CircleMetric, string> = {
         'orders': 'Orders',
         'profit': 'Profit',
         'sales': 'Sales',
@@ -239,9 +239,9 @@ export function renderCircles(projection: any, targetG: SVGGElement | null) {
         return;
     }
 
-    // Ensure cityMetrics is populated
-    if (Object.keys(cityMetrics).length === 0) {
-        console.log('cityMetrics empty, skipping render');
+    // Ensure circleMetrics is populated
+    if (Object.keys(circleMetrics).length === 0) {
+        console.log('circleMetrics empty, skipping render');
         return;
     }
 
@@ -254,7 +254,7 @@ export function renderCircles(projection: any, targetG: SVGGElement | null) {
     } // very hacky fix for the naming mismatch between country and selectedCountry.state
 
     let cityData: (CityData & { metricValue: number })[] = [];
-    mapCityMetrics((country, city, data) => {
+    mapCircleMetrics((country, city, data) => {
         if (!geoData[country] || !geoData[country][city]) {
             return;
         }
