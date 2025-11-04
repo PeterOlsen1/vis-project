@@ -4,7 +4,6 @@ import {
   orderData,
   circleMetrics,
   circleMetric,
-  circlesRendered,
 } from "./mapStates.svelte";
 
 export const normalizeCountryName = (name: string): string => {

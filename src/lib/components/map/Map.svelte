@@ -19,7 +19,6 @@
     animationTimeframe,
     animationPlaying,
     animationDelay,
-    circlesRendered,
     circleMetric,
     showHeatmap,
     circleMetrics,
